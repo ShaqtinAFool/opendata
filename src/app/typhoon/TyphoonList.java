@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -49,6 +50,11 @@ public class TyphoonList implements ITF_DB {
     public void getCWBTyListToHtml() {//<editor-fold defaultstate="collapsed" desc="...">
         int waitTimeSec = 20;
         WebClient webClient = new WebClient();
+        
+        // 關閉 htmlunit warnings
+        java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(java.util.logging.Level.OFF);
+        java.util.logging.Logger.getLogger("org.apache.http").setLevel(java.util.logging.Level.OFF);      
+        
         try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(whereToDownload + "tylist.html"),"UTF-8"))) {
             HtmlPage page = webClient.getPage(url);
             // https://developers.google.com/webmasters/ajax-crawling/docs/html-snapshot
