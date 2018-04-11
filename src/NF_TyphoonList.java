@@ -707,7 +707,7 @@ public class NF_TyphoonList extends DBSetting implements ITF_DB {
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)        
                         if("SQL_Server".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_AnalysisInfo VALUES (?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
+                        }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_AnalysisInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
@@ -818,7 +818,7 @@ public class NF_TyphoonList extends DBSetting implements ITF_DB {
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)
                         if("SQL_Server".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_ForecastInfo VALUES (?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
+                        }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_ForecastInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
@@ -900,7 +900,7 @@ public class NF_TyphoonList extends DBSetting implements ITF_DB {
                 prepStmt.setString(6, wind_unit);
                 prepStmt.setString(7, valid_time);                
                 prepStmt.setString(8, valid_hour);
-                System.out.println(f_info_id + "," + lat + "," + lon + "," + min_pres);
+//                System.out.println(f_info_id + "," + lat + "," + lon + "," + min_pres);
                 prepStmt.executeUpdate();
             }
             // 必放，才不會影響下面的 prepStmt (重複匯入)
@@ -930,7 +930,7 @@ public class NF_TyphoonList extends DBSetting implements ITF_DB {
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)
                         if("SQL_Server".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_EnsembleInfo VALUES (?,?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
+                        }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
                             insertSQL = "INSERT INTO Ty_EnsembleInfo VALUES (0,?,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);

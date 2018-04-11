@@ -32,6 +32,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import osi.presentation.SSL;
 import weather.Adjust;
 //</editor-fold>
 
@@ -58,37 +59,7 @@ public class NF_RainData extends DBSetting implements ITF_DB {
         al_rawdata = new ArrayList<>();
         hm_stnAddress = new HashMap<>();
     }//</editor-fold>
-    
-    /**
-     * 處理 SSL 無法用 Jsoup 問題
-     */
-    private void enableSSLSocket() {//<editor-fold defaultstate="collapsed" desc="...">
-        try {
-            HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
-                @Override
-                public boolean verify(String hostname, SSLSession session) {
-                    return true;
-                }
-            });
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, new X509TrustManager[]{new X509TrustManager() {
-                @Override
-                public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-                }
-                @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-                }
-                @Override
-                public X509Certificate[] getAcceptedIssuers() {
-                    return new X509Certificate[0];
-                }
-            }}, new SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
-        } catch (NoSuchAlgorithmException | KeyManagementException ex) {
-            ex.printStackTrace();
-        }
-    }//</editor-fold>
-    
+   
     /**
      * 取得測站地址
      * 目前已收集 CWB, WRA
@@ -415,9 +386,10 @@ public class NF_RainData extends DBSetting implements ITF_DB {
     
     
     public static void main(String[] args) {
-        NF_RainData nf = new NF_RainData();
-        //用來解決無法 SSL 連線問題
-        nf.enableSSLSocket();
+        NF_RainData nf = new NF_RainData();        
+        // 解決無法 SSL 連線問題
+        SSL ps = new SSL();
+        ps.enableSSLSocket();
         // 將測站地址放到 List 裡面
         nf.setStnAddress();
         // 解析讀進來的資料
