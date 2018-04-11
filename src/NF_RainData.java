@@ -6,6 +6,7 @@ import osi.presentation.SSL;
  */
 public class NF_RainData {
     public static void main(String[] args) {
+        // 開起解析方法
         RainData r = new RainData();        
         // 解決無法 SSL 連線問題
         SSL ps = new SSL();

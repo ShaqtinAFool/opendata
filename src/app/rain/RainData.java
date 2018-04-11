@@ -1,7 +1,6 @@
 package app.rain;
 
 import app.db.DBSetting;
-import static app.itf.Itf_Prop.stnwebProp;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -26,7 +25,6 @@ import weather.Adjust;
 
 /**
  * 解析雨量資料
- * @author tony
  */
 public class RainData extends DBSetting {
 
