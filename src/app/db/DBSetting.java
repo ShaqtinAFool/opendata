@@ -1,19 +1,19 @@
 package app.db;
 
+import app.itf.Itf_Database;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import app.itf.Itf_Prop;
 
 /**
- * 作業系統環境設定
- * @author 1312032
+ * @作業系統環境設定
  */
-public class DBSetting {
+public class DBSetting implements Itf_Prop, Itf_Database {
     
-    private Properties prop;
     private Connection conn;
     private String db, driver, jdbcURL, user, password;
     
@@ -21,9 +21,17 @@ public class DBSetting {
      * 設定初始條件
      */
     public DBSetting() {//<editor-fold defaultstate="collapsed" desc="...">
-        prop = new Properties();
+        setDBInfo();
+    }//</editor-fold>
+
+    /**
+     * 設定 db 資訊
+     */
+    @Override
+    public void setDBInfo() {
+        Properties prop = new Properties();
         try {
-            prop.load(new FileReader("./src/db.properties"));
+            prop.load(new FileReader(dbProp));
             db = prop.getProperty("db");
             if(db.equals("SQL_Server")){
                 driver = prop.getProperty("mssql_driver");
@@ -48,8 +56,8 @@ public class DBSetting {
         } finally {
             System.out.println("使用 " + db);
         }
-    }//</editor-fold>
-        
+    }
+    
     /**
      * 取得連接資料庫的設定
      * @param input 輸入文字

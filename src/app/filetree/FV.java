@@ -1,6 +1,5 @@
 package app.filetree;
 
-import app.itf.ITF_DB;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,12 +7,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Properties;
+import app.itf.Itf_Prop;
 
 /**
  * 檔案路徑
  * @author tony
  */
-public class FV implements ITF_DB {
+public class FV implements Itf_Prop {
     
     private final WalkFileTree w_file;
 
@@ -52,4 +52,5 @@ public class FV implements ITF_DB {
 //            System.out.println(string);
 //        }
 //    }
+
 }

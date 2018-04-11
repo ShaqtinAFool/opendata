@@ -3,7 +3,6 @@ import app.db.DBSetting;
 import app.filesize.FileInfomation;
 import app.filetree.FV;
 import app.filetree.WalkFileTree;
-import app.itf.ITF_DB;
 import app.typhoon.TyphoonList;
 import java.io.File;
 import java.io.FileReader;
@@ -25,13 +24,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import weather.Adjust;
-//</editor-fold>
-
+import app.itf.Itf_Prop;
 /**
  * 練習正規化:颱風資料
  * @author 1312032
  */
-public class NF_TyphoonList extends DBSetting implements ITF_DB {
+public class NF_TyphoonList extends DBSetting implements Itf_Prop {
 
     private Connection conn;
     private String db_type, whereToDownload, regex;

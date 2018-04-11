@@ -1,7 +1,6 @@
 package app.typhoon;
 
 //<editor-fold defaultstate="collapsed" desc="import...">
-import app.itf.ITF_DB;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.DomElement;
@@ -16,16 +15,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-//</editor-fold>
+import app.itf.Itf_Prop;
 
-public class TyphoonList implements ITF_DB {
+public class TyphoonList implements Itf_Prop {
     
     private String url;
     private String whereToDownload; 
