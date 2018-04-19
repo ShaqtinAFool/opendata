@@ -1,9 +1,11 @@
 //<editor-fold defaultstate="collapsed" desc="import...">
 import app.filesize.FileInfomation;
 import app.filetree.FV;
+import app.typhoon.DownloadTypeEnum;
 import app.typhoon.TyphoonList;
 import app.typhoon.TyphoonData;
 //</editor-fold>
+
 /**
  * 颱風資料
  */
@@ -17,9 +19,12 @@ public class NF_TyphoonList {
         TyphoonList tl = new TyphoonList();// 下載颱風清單
         FileInfomation fi = new FileInfomation();// 判斷檔案資訊
         /****************** 以下開始執行 ******************/
+        // 更新颱風名單
+        System.out.println("更新颱風名單");
         tl.getCWBTyListToHtml();
-        // 下載
-//        nf.downloadTigge(15000);
+        // 下載: 即時 or 歷史
+        System.out.println("下載");
+        td.getTigge(15000, DownloadTypeEnum.byRealtime);
         for (Object url : fv.getTyphoonPath()) {
             // 檔案大小為 0，直接跳過
             if(fi.getByte((String) url) == 0)continue;
