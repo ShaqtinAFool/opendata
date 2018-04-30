@@ -34,8 +34,13 @@ public class RainData extends DBSetting {
     private final HashMap<String, String> hm_stnAddress;
     private final String db_type;
 
-    
-    public RainData() {
+    /**
+     * 
+     * @param dbEnum 
+     */
+    public RainData(Enum dbEnum) {
+        // 必寫
+        super(dbEnum);
         // 資料庫
         db_type = getReturnValue("dbType");
         conn = getConn();
@@ -233,7 +238,7 @@ public class RainData extends DBSetting {
                 al_stnInfo.add(import_stnInfo); 
                 // 判斷是否在 StnInfo 已經存特定測站
                 // 如果不存在，新建站點(用 SQL 語法去找存不存在)
-                judgeExistSQL = "SELECT COUNT(stn_id) FROM Rn_StationInfo WHERE stn_id = ?";
+                judgeExistSQL = "SELECT COUNT(stn_id) FROM StationInfo WHERE stn_id = ?";
                 prepStmt = conn.prepareStatement(judgeExistSQL);
                 prepStmt.setString(1, stationId);
                 rs = prepStmt.executeQuery();
@@ -243,9 +248,9 @@ public class RainData extends DBSetting {
                         // 不存在的測站才更新(value == 0 代表不存在，select 不到)
                         insertSQL = "";
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Rn_StationInfo VALUES (?,?,?,?,?,?,?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
-                            insertSQL = "INSERT INTO Rn_StationInfo VALUES (0,?,?,?,?,?,?,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO StationInfo VALUES (?,?,?,?,?,?,?,?,?)";// MSSQL
+                        }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                            insertSQL = "INSERT INTO StationInfo VALUES (0,?,?,?,?,?,?,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, stationId);
@@ -284,7 +289,7 @@ public class RainData extends DBSetting {
                     String stnId_stnoInfo = s_stnoInfo.split(regex)[0];
                     if(stationId.equals(stnId_stnoInfo)){
                         // 當讀到的測站和 StnInfo 測站一樣時
-                        establishFK = "SELECT stn_info_id FROM Rn_StationInfo WHERE stn_id = ?";
+                        establishFK = "SELECT stn_info_id FROM StationInfo WHERE stn_id = ?";
                         prepStmt = conn.prepareStatement(establishFK);
                         prepStmt.setString(1, stationId);
                         rs = prepStmt.executeQuery();
@@ -292,9 +297,9 @@ public class RainData extends DBSetting {
                             int stnInfo_Id = rs.getInt(1);
                             insertSQL = "";
                             if("SQL_Server".equals(db_type)){
-                                insertSQL = "INSERT INTO Rn_ObservationData VALUES (?,?,?,?,?,?,?,?,?)";// MSSQL
-                            }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
-                                insertSQL = "INSERT INTO Rn_ObservationData VALUES (0,?,?,?,?,?,?,?,?,?)";// MySQL
+                                insertSQL = "INSERT INTO ObservationData VALUES (?,?,?,?,?,?,?,?,?)";// MSSQL
+                            }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                                insertSQL = "INSERT INTO ObservationData VALUES (0,?,?,?,?,?,?,?,?,?)";// MySQL
                             }
                             prepStmt = conn.prepareStatement(insertSQL);
 //                            System.out.println("stnInfo_Id: " + stnInfo_Id);
@@ -314,7 +319,7 @@ public class RainData extends DBSetting {
             }
             /********************** 建立資料起迄時間 **********************/
             ArrayList<String> al_observationTimeRange = new ArrayList<>();
-            selectSQL = "SELECT stn_info_id, min(obs_time), max(obs_time) FROM Rn_ObservationData GROUP BY stn_info_id;";
+            selectSQL = "SELECT stn_info_id, min(obs_time), max(obs_time) FROM ObservationData GROUP BY stn_info_id;";
             prepStmt = conn.prepareStatement(selectSQL);
             rs = prepStmt.executeQuery();
             rows = 0;
@@ -332,7 +337,7 @@ public class RainData extends DBSetting {
                 int stnInfo_Id = Integer.parseInt(s.split(regex)[0]);
                 String initialTime = s.split(regex)[1];
                 String finalTime = s.split(regex)[2];
-                judgeExistSQL = "SELECT COUNT(stn_info_id) FROM Rn_StationTimeRange WHERE stn_info_id = ?";
+                judgeExistSQL = "SELECT COUNT(stn_info_id) FROM StationTimeRange WHERE stn_info_id = ?";
                 prepStmt = conn.prepareStatement(judgeExistSQL);
                 prepStmt.setInt(1, stnInfo_Id);
                 rs = prepStmt.executeQuery();
@@ -342,7 +347,7 @@ public class RainData extends DBSetting {
                     if(value == 0){
                         // 如果沒有這個測站，就 Insert
 //                        System.out.println("Insert");
-                        insertSQL = "INSERT INTO Rn_StationTimeRange VALUES (?,?,?)";
+                        insertSQL = "INSERT INTO StationTimeRange VALUES (?,?,?)";
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setInt(1, stnInfo_Id);
                         prepStmt.setString(2, initialTime);
@@ -351,7 +356,7 @@ public class RainData extends DBSetting {
                     }else{
                         // 如果有這個測站，就 Update
 //                        System.out.println("Update");
-                        updateSQL = "UPDATE Rn_StationTimeRange SET ini_time = ?, fnl_time = ? WHERE stn_info_id = ?";
+                        updateSQL = "UPDATE StationTimeRange SET ini_time = ?, fnl_time = ? WHERE stn_info_id = ?";
                         prepStmt = conn.prepareStatement(updateSQL);
                         prepStmt.setString(1, initialTime);
                         prepStmt.setString(2, finalTime);

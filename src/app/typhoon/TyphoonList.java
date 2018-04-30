@@ -22,6 +22,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import app.itf.Itf_Prop;
+//</editor-fold>
 
 public class TyphoonList implements Itf_Prop {
     
@@ -64,16 +65,18 @@ public class TyphoonList implements Itf_Prop {
             }
         } catch (IOException | FailingHttpStatusCodeException ex) {
             ex.printStackTrace();
+        } finally {
+            System.out.println("from CWB 更新颱風名單");
         }
     }//</editor-fold>
 
     /**
-     * 公開使用：擷取氣象局颱風編號
-     * @param tigge_typhoon_name
+     * 擷取氣象局颱風編號
+     * @param ty_name
      * @param setYear
      * @return 颱風編號(年份 + 編號)
      */
-    public int getCWBTyNumber(String tigge_typhoon_name , int setYear) {//<editor-fold defaultstate="collapsed" desc="...">
+    public int getCWBTyNumber(String ty_name , int setYear) {//<editor-fold defaultstate="collapsed" desc="...">
         String url = whereToDownload + "tylist.html";
         int tyNumber = 0;
         File file = new File(url);
@@ -90,17 +93,15 @@ public class TyphoonList implements Itf_Prop {
                     String typhoon_name_en = typhoonWarningList.split("\\s+")[3].trim();     
                     String output = String.format("%d,%s,%s,%s" , year , tyNumber , typhoon_name_tw , typhoon_name_en);
                     if(year == setYear){
-//                        if(tigge_typhoon_name.equals(typhoon_name_en)){// 原本寫法
-                        if(typhoon_name_en.contains(tigge_typhoon_name)){
-//                            System.out.println(output);
+//                        if(ty_name.equals(typhoon_name_en)){// 原本寫法
+                        if(typhoon_name_en.contains(ty_name)){
                             return tyNumber;
                         }
                     }
                 }
             }
         } catch (IOException ex) {
-            System.err.println("**Error**");
-            System.err.println("ParseCode > getCWBTyphoonNumber : " + ex.toString());
+            ex.printStackTrace();
         }
         // 沒此颱風名稱時，回傳 -999
         return -999;

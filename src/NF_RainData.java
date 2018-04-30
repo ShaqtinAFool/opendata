@@ -1,3 +1,4 @@
+import app.db.DBSettingEnum;
 import app.rain.RainData;
 import osi.presentation.SSL;
 
@@ -7,7 +8,7 @@ import osi.presentation.SSL;
 public class NF_RainData {
     public static void main(String[] args) {
         // 開起解析方法
-        RainData r = new RainData();        
+        RainData r = new RainData(DBSettingEnum.by10Rain);        
         // 解決無法 SSL 連線問題
         SSL ps = new SSL();
         ps.enableSSLSocket();

@@ -4,6 +4,7 @@ package app.typhoon;
 import app.db.DBSetting;
 import app.filetree.WalkFileTree;
 import static app.itf.Itf_Prop.tywebProp;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,6 +19,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -31,8 +34,9 @@ import weather.Adjust;
  */
 public class TyphoonData extends DBSetting {
     
+    private Properties prop;
     private Connection conn;
-    private String db_type, whereToDownload, regex;
+    private String db_type, whereToDownload, tiggeURL, regex;
     private Adjust adjust;
     private TyphoonList ty_list;
     private WalkFileTree w_file;
@@ -45,7 +49,15 @@ public class TyphoonData extends DBSetting {
     private HashSet<String> hs_ensbInfo;
     private ArrayList<String> al_rawdata;
     
-    public TyphoonData() {
+    /**
+     * 
+     * @param dbEnum
+     */
+    public TyphoonData(Enum dbEnum) {
+        // 必寫
+        super(dbEnum);
+        // 設定 property
+        setProperty();
         // 分格符號
         regex = ",";
         // 資料庫
@@ -62,63 +74,110 @@ public class TyphoonData extends DBSetting {
         adjust = new Adjust("yyyy-MM-dd HH:mm:ss");// 時間格式
         ty_list = new TyphoonList();
         w_file = new WalkFileTree();// 走訪目錄
+            
+    }
+    
+    /**
+     * 設定 property
+     */
+    private void setProperty() {
         try {
-            Properties prop = new Properties();
+            prop = new Properties();
             prop.load(new FileReader(tywebProp));
             whereToDownload = prop.getProperty("download_dir_path");
+            tiggeURL = prop.getProperty("tigge_web_url");
         } catch (IOException ex) {
             ex.printStackTrace();
-        }        
+        }     
     }
     
     /**
      * 下載 tigge XML (目前隱性建議，用 shell 下載或許較好)
      * @param timeout 緩衝時間
+     * @param dt_enum 下載方式
      */
-    public void downloadTigge(int timeout) {//<editor-fold defaultstate="collapsed" desc="...">
+    public void getTigge(int timeout, DownloadTypeEnum dt_enum) {//<editor-fold defaultstate="collapsed" desc="...">
         String[] centre = {"CMA", "ECMWF", "JMA", "KMA", "MSC", "NCEP", /*"STI",*/ "UKMO"};
         try {
             // 以下區域是設定變數
-            String yymmdd, createDirPath;
+            Adjust adj = new Adjust("yyyyMMdd");
+            String yymmdd, createDirPath, nowTime, theDayBefore;
             Document doc_lev1, doc_lev2;
-            URL wantToDownloadURL;
-            File makeDownloadDir, createFile, deleteFile;
-            Properties prop = new Properties();
             // 以上區域是設定變數
             for (int i = 0; i < centre.length; i++) {
-                String tiggeURL = prop.getProperty("tigge_url") + centre[i];
-                doc_lev1 = Jsoup.connect(tiggeURL).timeout(timeout).get();
+                // tiggeURL = http://tparc.mri-jma.go.jp/cxmldata/cxml/ECMWF
+                // 解析網站資料
+                doc_lev1 = Jsoup.connect(tiggeURL + "/" + centre[i]).timeout(timeout).get();
                 Elements elms_a_lev1 = doc_lev1.select("a");
+//                System.out.println(elms_a_lev1.html());
                 int rows = 0;
                 for (Element elm_a_lev1 : elms_a_lev1) {
-                    if(rows >= 5){
+                    if(rows >= 5) {
+//                        System.out.println(elm_a_lev1.text());
                         // 建資料夾用
-                        yymmdd = elm_a_lev1.text();
-                        doc_lev2 = Jsoup.connect(elm_a_lev1.absUrl("href")).timeout(timeout).get();
-                        Elements elms_a_lev2 = doc_lev2.select("a");
-                        for (Element elm_a_lev2 : elms_a_lev2) {
-                            String xmlURL = elm_a_lev2.absUrl("href");
-                            if(xmlURL.contains("_tigge_")){
-                                // 取出檔案名稱
-                                String xmlFile = elm_a_lev2.text();
-                                createDirPath = String.format("%s%s/%s", whereToDownload, centre[i], yymmdd);
-                                wantToDownloadURL = new URL(xmlURL);
-                                // 建立資料夾，不知道有沒有強過老方法 createDirectory.mkdirs();
-                                makeDownloadDir = new File(createDirPath);
-                                FileUtils.forceMkdir(makeDownloadDir);
-                                createFile = new File(createDirPath + xmlFile);
-                                // 下載網頁上檔案
-                                FileUtils.copyURLToFile(wantToDownloadURL, createFile);
+                        yymmdd = elm_a_lev1.text().replaceAll("/", "");
+                        nowTime = adj.getNowTime();
+                        adj.inputValue(nowTime);
+                        theDayBefore = adj.adjustDay(-1);
+                        if(dt_enum.equals(DownloadTypeEnum.byRealtime)){
+                            // 下載即時資料
+                            if(yymmdd.equals(theDayBefore)) {
+                                // 取特定日期
+                                doc_lev2 = Jsoup.connect(elm_a_lev1.absUrl("href")).timeout(timeout).get();
+                                Elements elms_a_lev2 = doc_lev2.select("a");
+                                for (Element elm_a_lev2 : elms_a_lev2) {
+                                    String xmlURL = elm_a_lev2.absUrl("href");
+//                                    if(xmlURL.contains("_tigge_")){
+                                    if(xmlURL.contains(".xml")){
+                                        // 取出檔案名稱
+                                        String xmlFile = elm_a_lev2.text();
+                                        createDirPath = String.format("%s/%s/%s/", whereToDownload, centre[i], yymmdd);
+                                        downloadData(xmlFile, xmlURL, createDirPath);
+                                    }
+                                }
                             }
+                        }else if(dt_enum.equals(DownloadTypeEnum.byHistory)){
+                            // 下載歷史資料
+                            doc_lev2 = Jsoup.connect(elm_a_lev1.absUrl("href")).timeout(timeout).get();
+                            Elements elms_a_lev2 = doc_lev2.select("a");
+                            for (Element elm_a_lev2 : elms_a_lev2) {
+                                String xmlURL = elm_a_lev2.absUrl("href");
+                                if(xmlURL.contains(".xml")){
+                                    // 取出檔案名稱
+                                    String xmlFile = elm_a_lev2.text();
+                                    createDirPath = String.format("%s/%s/%s/", whereToDownload, centre[i], yymmdd);
+                                    downloadData(xmlFile, xmlURL, createDirPath);
+                                }
+                            }                         
                         }
                     }
                     rows++;
-                }
+                }   
             }
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
             
+        }
+    }//</editor-fold>    
+    
+    /**
+     * 下載 xml
+     * @param xmlFile xml 檔名
+     * @param xmlURL xml URL
+     * @param createDirPath 檔案下載後的位置
+     */
+    public void downloadData(String xmlFile, String xmlURL, String createDirPath) {//<editor-fold defaultstate="collapsed" desc="...">
+        try {
+            URL wantToDownloadURL = new URL(xmlURL);
+            // 建立資料夾，不知道有沒有強過老方法 createDirectory.mkdirs();
+            File makeDownloadDir = new File(createDirPath);
+            FileUtils.forceMkdir(makeDownloadDir);
+            File createFile = new File(createDirPath + xmlFile);
+            // 下載網頁上檔案
+            FileUtils.copyURLToFile(wantToDownloadURL, createFile);        
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }//</editor-fold>
     
@@ -133,9 +192,9 @@ public class TyphoonData extends DBSetting {
             // 以下區域是設定變數
             String centre;
             // 以上區域是設定變數
-            System.out.println(url);
             Path abs_path = Paths.get(url);
-            centre = abs_path.getName(2).toString();
+            centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
+            System.out.println(centre + "  " + url);
             String typhoonReginal;
             switch (centre) {
                 case "JMA":
@@ -415,7 +474,7 @@ public class TyphoonData extends DBSetting {
                 ty_name = s.split(regex)[0];
                 ty_year = s.split(regex)[1];
                 ty_number = s.split(regex)[2];
-                judgeExistSQL = "SELECT COUNT(*) FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_year = ? AND ty_number = ?";
+                judgeExistSQL = "SELECT COUNT(*) FROM TyphoonInfo WHERE ty_name_en = ? AND ty_year = ? AND ty_number = ?";
                 // 判斷是否存在該颱風，判斷條件: 颱風名稱、年分、編號
                 // 如果不存在，新建該颱風清單(用 SQL 語法去找存不存在)
                 prepStmt = conn.prepareStatement(judgeExistSQL);
@@ -429,9 +488,9 @@ public class TyphoonData extends DBSetting {
                         // 不存在才更新(value == 0 代表不存在，select 不到)
                         insertSQL = "";
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_TyphoonInfo VALUES (?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_TyphoonInfo VALUES (0,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO TyphoonInfo VALUES (?,?,?)";// MSSQL
+                        }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                            insertSQL = "INSERT INTO TyphoonInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_name);
@@ -453,7 +512,7 @@ public class TyphoonData extends DBSetting {
                 gh = s.split(regex)[3];
                 data_source = s.split(regex)[4];
                 judgeExistSQL = 
-                    "SELECT COUNT(*) FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                    "SELECT COUNT(*) FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                 // 判斷是否存在該單位，判斷條件: 單位、模式、解析度、高度、來源
                 // 如果不存在，新建該單位清單(用 SQL 語法去找存不存在)
                 prepStmt = conn.prepareStatement(judgeExistSQL);
@@ -469,9 +528,9 @@ public class TyphoonData extends DBSetting {
                         // 不存在才更新(value == 0 代表不存在，select 不到)
                         insertSQL = "";
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_CentreInfo VALUES (?,?,?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_CentreInfo VALUES (0,?,?,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO CentreInfo VALUES (?,?,?,?,?)";// MSSQL
+                        }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                            insertSQL = "INSERT INTO CentreInfo VALUES (0,?,?,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, centre);
@@ -492,6 +551,58 @@ public class TyphoonData extends DBSetting {
     }//</editor-fold>
     
     /**
+     * 解析 CWB Best Track
+     * @param url 
+     */
+    public void parseCWBTrack(String url) {
+        Path abs_path = Paths.get(url);
+        String centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
+        System.out.println(centre + "  " + url);
+        try(BufferedReader br = new BufferedReader(new FileReader(url))) {
+            String output;
+            while(br.ready()) {
+                String rawData = br.readLine();
+                String raw_typhoon_name_En = rawData.split("\\s+")[0]; // 2008NEOGURI
+                String typhoon_name_En, tyYear;
+                if("Typhname".equals(raw_typhoon_name_En)){
+                    // 標題名稱跳過
+                    continue;
+                }else{
+                    tyYear = raw_typhoon_name_En.substring(0 , 4);
+                    typhoon_name_En = raw_typhoon_name_En.substring(4 , raw_typhoon_name_En.length()).toUpperCase();
+                }
+                int getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoon_name_En, Integer.parseInt(tyYear)); 
+                String baseTime_date = rawData.split("\\s+")[1];
+                String baseTime_time = rawData.split("\\s+")[2];
+                String raw_BaseTime = baseTime_date + " " + baseTime_time + ":00";
+                adjust.inputValue(raw_BaseTime);
+                String baseTime = adjust.outputYMDH();
+                String validTime = baseTime;
+                String lat = rawData.split("\\s+")[3];
+                String lon = rawData.split("\\s+")[4];
+                String min_pressure = rawData.split("\\s+")[5];
+                String speed = rawData.split("\\s+")[6];
+                System.out.println(baseTime + " " + validTime);
+                int fcstHour = adjust.diffHour(validTime, baseTime);
+                
+                String import_tyInfo = String.format("%s,%s,%d",
+                    typhoon_name_En, tyYear, getCWBTyphoonNumber);
+                String import_cetrInfo = String.format("%s,%s,%s,%s,%s",
+                    "CWB", "WEPS", "", "-999", "CWB");
+                String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%d,%s,%s,%s",
+                    typhoon_name_En, "CWB","WEPS", "", "", getCWBTyphoonNumber,
+                    baseTime, validTime, lat, lon, min_pressure, speed, "m/s",
+                    fcstHour, "", "CWB", "forecast");                
+                hs_tyInfo.add(import_tyInfo);
+                hs_cetreInfo.add(import_cetrInfo);
+                al_rawdata.add(import_rawdata); 
+            }
+        } catch(IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    /**
      * 正規化颱風清單和單位清單
      */
     public void setNameAndCentre() {//<editor-fold defaultstate="collapsed" desc="...">
@@ -504,7 +615,7 @@ public class TyphoonData extends DBSetting {
                 ty_name = s.split(regex)[0];
                 ty_year = s.split(regex)[1];
                 ty_number = s.split(regex)[2];
-                judgeExistSQL = "SELECT COUNT(*) FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_year = ? AND ty_number = ?";
+                judgeExistSQL = "SELECT COUNT(*) FROM TyphoonInfo WHERE ty_name_en = ? AND ty_year = ? AND ty_number = ?";
                 // 判斷是否存在該颱風，判斷條件: 颱風名稱、年分、編號
                 // 如果不存在，新建該颱風清單(用 SQL 語法去找存不存在)
                 prepStmt = conn.prepareStatement(judgeExistSQL);
@@ -518,9 +629,9 @@ public class TyphoonData extends DBSetting {
                         // 不存在才更新(value == 0 代表不存在，select 不到)
                         insertSQL = "";
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_TyphoonInfo VALUES (?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_TyphoonInfo VALUES (0,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO TyphoonInfo VALUES (?,?,?)";// MSSQL
+                        }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                            insertSQL = "INSERT INTO TyphoonInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_name);
@@ -543,7 +654,7 @@ public class TyphoonData extends DBSetting {
                 gh = s.split(regex)[3];
                 data_source = s.split(regex)[4];
                 judgeExistSQL = 
-                    "SELECT COUNT(*) FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                    "SELECT COUNT(*) FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                 // 判斷是否存在該單位，判斷條件: 單位、模式、解析度、高度、來源
                 // 如果不存在，新建該單位清單(用 SQL 語法去找存不存在)
                 prepStmt = conn.prepareStatement(judgeExistSQL);
@@ -559,9 +670,9 @@ public class TyphoonData extends DBSetting {
                         // 不存在才更新(value == 0 代表不存在，select 不到)
                         insertSQL = "";
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_CentreInfo VALUES (?,?,?,?,?)";// MSSQL
-                        }else if("MySQL".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_CentreInfo VALUES (0,?,?,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO CentreInfo VALUES (?,?,?,?,?)";// MSSQL
+                        }else if("MySQL".equals(db_type) || "MariaDB".equals(db_type)){
+                            insertSQL = "INSERT INTO CentreInfo VALUES (0,?,?,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, centre);
@@ -606,7 +717,7 @@ public class TyphoonData extends DBSetting {
                 // 位置不一樣(rawdata_columns)
 
                 // 用颱風名稱和編號判斷
-                establishFK_ty = "SELECT ty_info_id FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
+                establishFK_ty = "SELECT ty_info_id FROM TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
                 prepStmt = conn.prepareStatement(establishFK_ty);
                 prepStmt.setString(1, ty_name);
                 prepStmt.setString(2, ty_number);
@@ -617,14 +728,14 @@ public class TyphoonData extends DBSetting {
                 // 考慮不同狀態，要考慮的欄位不一樣
                 if("analysis".equals(type)){
                     // 用單位、模式、來源判斷
-                    establishFK_cetr = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND data_source = ?";
+                    establishFK_cetr = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND data_source = ?";
                     prepStmt = conn.prepareStatement(establishFK_cetr);
                     prepStmt.setString(1, centre);
                     prepStmt.setString(2, model);
                     prepStmt.setString(3, data_source); 
                 }else if("forecast".equals(type)){
                     // 用單位、模式、來源判斷
-                    establishFK_cetr = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND data_source = ?";
+                    establishFK_cetr = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND data_source = ?";
                     prepStmt = conn.prepareStatement(establishFK_cetr);
                     prepStmt.setString(1, centre);
                     prepStmt.setString(2, model);
@@ -633,14 +744,16 @@ public class TyphoonData extends DBSetting {
                     // 用單位、模式、來源判斷、解析度、高度
                     String resolution = s.split(regex)[rawdata_columns - 4];
                     String gh = s.split(regex)[rawdata_columns - 3];
-                    establishFK_cetr = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                    establishFK_cetr = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                     prepStmt = conn.prepareStatement(establishFK_cetr);
                     prepStmt.setString(1, centre);
                     prepStmt.setString(2, model);
                     prepStmt.setString(3, resolution);
                     prepStmt.setString(4, gh);
                     prepStmt.setString(5, data_source);  
-                }                    
+                }else if("offical".equals(type)){
+                    
+                }                  
                 rs = prepStmt.executeQuery();
                 while(rs.next()){
                     centre_info_id = rs.getString(1);
@@ -690,7 +803,7 @@ public class TyphoonData extends DBSetting {
                 base_time = s.split(regex)[2];
                 // 如果不存在，新建各 Type Info (用 SQL 語法去找存不存在)
                 insertSQL = "";
-                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM Ty_AnalysisInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
+                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM AnalysisInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
                 prepStmt = conn.prepareStatement(judgeExistSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -701,9 +814,9 @@ public class TyphoonData extends DBSetting {
                     if(value == 0){
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)        
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_AnalysisInfo VALUES (?,?,?)";// MSSQL
+                            insertSQL = "INSERT INTO AnalysisInfo VALUES (?,?,?)";// MSSQL
                         }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_AnalysisInfo VALUES (0,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO AnalysisInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_info_id);
@@ -738,7 +851,7 @@ public class TyphoonData extends DBSetting {
                 // (2) 關連 tyinfo table 的 rawdata
                 ty_name_en = s.split(regex)[0];
                 ty_number = s.split(regex)[5];
-                String putTyInfoSQL = "SELECT ty_info_id FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
+                String putTyInfoSQL = "SELECT ty_info_id FROM TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
                 prepStmt = conn.prepareStatement(putTyInfoSQL);
                 prepStmt.setString(1, ty_name_en);
                 prepStmt.setString(2, ty_number);
@@ -752,7 +865,7 @@ public class TyphoonData extends DBSetting {
                 resolution = s.split(regex)[rawdata_columns - 4];
                 geopotential_height = s.split(regex)[rawdata_columns - 3];
                 data_source = s.split(regex)[rawdata_columns - 2];
-                String putCentreInfoSQL = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                String putCentreInfoSQL = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                 prepStmt = conn.prepareStatement(putCentreInfoSQL);
                 prepStmt.setString(1, centre);
                 prepStmt.setString(2, model);
@@ -765,7 +878,7 @@ public class TyphoonData extends DBSetting {
                 }
                 // (4) 關連 XXXinfo table 的 rawdata
                 base_time = s.split(regex)[6];
-                String putXXXInfoSQL = "SELECT a_info_id FROM Ty_AnalysisInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
+                String putXXXInfoSQL = "SELECT a_info_id FROM AnalysisInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
                 prepStmt = conn.prepareStatement(putXXXInfoSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -775,7 +888,7 @@ public class TyphoonData extends DBSetting {
                     a_info_id = rs.getString(1);
                 }
                 // 匯入 XXXContent 
-                insertSQL = "INSERT INTO Ty_AnalysisContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
+                insertSQL = "INSERT INTO AnalysisContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
                 prepStmt = conn.prepareStatement(insertSQL);
                 prepStmt.setString(1, a_info_id);
                 prepStmt.setString(2, lat);
@@ -801,7 +914,7 @@ public class TyphoonData extends DBSetting {
                 base_time = s.split(regex)[2];
                 // 如果不存在，新建各 Type Info (用 SQL 語法去找存不存在)
                 insertSQL = "";                
-                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM Ty_ForecastInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";               
+                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM ForecastInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";               
                 prepStmt = conn.prepareStatement(judgeExistSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -812,9 +925,9 @@ public class TyphoonData extends DBSetting {
                     if(value == 0){
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_ForecastInfo VALUES (?,?,?)";// MSSQL
+                            insertSQL = "INSERT INTO ForecastInfo VALUES (?,?,?)";// MSSQL
                         }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_ForecastInfo VALUES (0,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO ForecastInfo VALUES (0,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_info_id);
@@ -848,7 +961,7 @@ public class TyphoonData extends DBSetting {
                 // (2) 關連 tyinfo table 的 rawdata
                 ty_name_en = s.split(regex)[0];
                 ty_number = s.split(regex)[5];      
-                String putTyInfoSQL = "SELECT ty_info_id FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
+                String putTyInfoSQL = "SELECT ty_info_id FROM TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
                 prepStmt = conn.prepareStatement(putTyInfoSQL);
                 prepStmt.setString(1, ty_name_en);
                 prepStmt.setString(2, ty_number);
@@ -862,7 +975,7 @@ public class TyphoonData extends DBSetting {
                 resolution = s.split(regex)[rawdata_columns - 4];
                 geopotential_height = s.split(regex)[rawdata_columns - 3];
                 data_source = s.split(regex)[rawdata_columns - 2];
-                String putCentreInfoSQL = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                String putCentreInfoSQL = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                 prepStmt = conn.prepareStatement(putCentreInfoSQL);
                 prepStmt.setString(1, centre);
                 prepStmt.setString(2, model);
@@ -875,7 +988,7 @@ public class TyphoonData extends DBSetting {
                 }
                 // (4) 關連 XXXinfo table 的 rawdata
                 base_time = s.split(regex)[6];
-                String putXXXInfoSQL = "SELECT f_info_id FROM Ty_ForecastInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
+                String putXXXInfoSQL = "SELECT f_info_id FROM ForecastInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ?";
                 prepStmt = conn.prepareStatement(putXXXInfoSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -885,7 +998,7 @@ public class TyphoonData extends DBSetting {
                     f_info_id = rs.getString(1);
                 }
                 // 匯入 XXXContent 
-                insertSQL = "INSERT INTO Ty_ForecastContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
+                insertSQL = "INSERT INTO ForecastContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
                 prepStmt = conn.prepareStatement(insertSQL);
                 prepStmt.setString(1, f_info_id);
                 prepStmt.setString(2, lat);
@@ -912,7 +1025,7 @@ public class TyphoonData extends DBSetting {
                 member = s.split(regex)[3];
                 // 如果不存在，新建各 Type Info (用 SQL 語法去找存不存在)
                 insertSQL = "";                
-                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM Ty_EnsembleInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ? AND member = ?";               
+                judgeExistSQL = "SELECT COUNT(ty_info_id) FROM EnsembleInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ? AND member = ?";               
                 prepStmt = conn.prepareStatement(judgeExistSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -924,9 +1037,9 @@ public class TyphoonData extends DBSetting {
                     if(value == 0){
                         // 不存在的各 Type Info 才更新(value == 0 代表不存在，select 不到)
                         if("SQL_Server".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_EnsembleInfo VALUES (?,?,?,?)";// MSSQL
+                            insertSQL = "INSERT INTO EnsembleInfo VALUES (?,?,?,?)";// MSSQL
                         }else if("MySQL".equals(db_type) | "MariaDB".equals(db_type)){
-                            insertSQL = "INSERT INTO Ty_EnsembleInfo VALUES (0,?,?,?,?)";// MySQL
+                            insertSQL = "INSERT INTO EnsembleInfo VALUES (0,?,?,?,?)";// MySQL
                         }
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_info_id);
@@ -961,7 +1074,7 @@ public class TyphoonData extends DBSetting {
                 // (2) 關連 tyinfo table 的 rawdata
                 ty_name_en = s.split(regex)[0];
                 ty_number = s.split(regex)[5];      
-                String putTyInfoSQL = "SELECT ty_info_id FROM Ty_TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
+                String putTyInfoSQL = "SELECT ty_info_id FROM TyphoonInfo WHERE ty_name_en = ? AND ty_number = ?";
                 prepStmt = conn.prepareStatement(putTyInfoSQL);
                 prepStmt.setString(1, ty_name_en);
                 prepStmt.setString(2, ty_number);
@@ -975,7 +1088,7 @@ public class TyphoonData extends DBSetting {
                 resolution = s.split(regex)[rawdata_columns - 4];
                 geopotential_height = s.split(regex)[rawdata_columns - 3];
                 data_source = s.split(regex)[rawdata_columns - 2];
-                String putCentreInfoSQL = "SELECT centre_info_id FROM Ty_CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
+                String putCentreInfoSQL = "SELECT centre_info_id FROM CentreInfo WHERE centre = ? AND model = ? AND resolution = ? AND geopotential_height = ? AND data_source = ?";
                 prepStmt = conn.prepareStatement(putCentreInfoSQL);
                 prepStmt.setString(1, centre);
                 prepStmt.setString(2, model);
@@ -990,7 +1103,7 @@ public class TyphoonData extends DBSetting {
                 base_time = s.split(regex)[6];
                 valid_time = s.split(regex)[7];
                 member = s.split(regex)[14];
-                String putXXXInfoSQL = "SELECT e_info_id FROM Ty_EnsembleInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ? AND member = ?";
+                String putXXXInfoSQL = "SELECT e_info_id FROM EnsembleInfo WHERE ty_info_id = ? AND centre_info_id = ? AND base_time = ? AND member = ?";
                 prepStmt = conn.prepareStatement(putXXXInfoSQL);
                 prepStmt.setString(1, ty_info_id);
                 prepStmt.setString(2, centre_info_id);
@@ -1001,7 +1114,7 @@ public class TyphoonData extends DBSetting {
                     e_info_id = rs.getString(1);
                 }
                 // 匯入 XXXContent 
-                insertSQL = "INSERT INTO Ty_EnsembleContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
+                insertSQL = "INSERT INTO EnsembleContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
                 prepStmt = conn.prepareStatement(insertSQL);
                 prepStmt.setString(1, e_info_id);
                 prepStmt.setString(2, lat);

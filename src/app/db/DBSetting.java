@@ -16,11 +16,14 @@ public class DBSetting implements Itf_Prop, Itf_Database {
     
     private Connection conn;
     private String db, driver, jdbcURL, user, password;
+    private Enum dbEnum;
     
     /**
      * 設定初始條件
+     * @param dbEnum 
      */
-    public DBSetting() {//<editor-fold defaultstate="collapsed" desc="...">
+    public DBSetting(Enum dbEnum) {//<editor-fold defaultstate="collapsed" desc="...">
+        this.dbEnum = dbEnum;
         setDBInfo();
     }//</editor-fold>
 
@@ -34,18 +37,29 @@ public class DBSetting implements Itf_Prop, Itf_Database {
             prop.load(new FileReader(dbProp));
             db = prop.getProperty("db");
             if(db.equals("SQL_Server")){
+                // SQl Server
                 driver = prop.getProperty("mssql_driver");
                 jdbcURL = prop.getProperty("mssql_jdbcURL");
                 user = prop.getProperty("mssql_user");
                 password = prop.getProperty("mssql_password");
             }else if(db.equals("MySQL")){
+                // MySQL
                 driver = prop.getProperty("mysql_driver");
-                jdbcURL = prop.getProperty("mysql_jdbcURL");
+                if(dbEnum.equals(DBSettingEnum.by10Rain)){
+                    jdbcURL = prop.getProperty("mysql_jdbcURL") + "rn";
+                }else{
+                    jdbcURL = prop.getProperty("mysql_jdbcURL") + "ty";
+                }
                 user = prop.getProperty("mysql_user");
                 password = prop.getProperty("mysql_password"); 
             }else{
+                // MariaDB
                 driver = prop.getProperty("maria_driver");
-                jdbcURL = prop.getProperty("maria_jdbcURL");
+                if(dbEnum.equals(DBSettingEnum.by10Rain)){
+                    jdbcURL = prop.getProperty("maria_jdbcURL") + "rn";
+                }else{
+                    jdbcURL = prop.getProperty("maria_jdbcURL") + "ty";
+                }
                 user = prop.getProperty("maria_user");
                 password = prop.getProperty("maria_password"); 
             }
@@ -63,7 +77,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
      * @param input 輸入文字
      * @return 
      */
-    protected String getReturnValue(String input) {
+    protected String getReturnValue(String input) {//<editor-fold defaultstate="collapsed" desc="...">
         String returnValue;
         switch (input) {
             case "driver":
@@ -86,7 +100,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
                 returnValue = "";
         }
         return returnValue;
-    }
+    }//</editor-fold>
     
     /**
      * 回傳資料庫連線資訊
@@ -95,4 +109,5 @@ public class DBSetting implements Itf_Prop, Itf_Database {
     public Connection getConn() {//<editor-fold defaultstate="collapsed" desc="...">
         return conn;
     }//</editor-fold>
+
 }
