@@ -1,0 +1,21 @@
+DROP TABLE officalcontent;
+DROP TABLE officalinfo;
+DROP TABLE analysiscontent;
+DROP TABLE analysisinfo;
+DROP TABLE ensemblecontent;
+DROP TABLE ensembleinfo;
+DROP TABLE forecastcontent;
+DROP TABLE forecastinfo;
+DROP TABLE centreinfo;
+DROP TABLE typhooninfo;
+
+-- TRUNCATE TABLE officalcontent;
+-- TRUNCATE TABLE officalinfo;
+-- TRUNCATE TABLE analysiscontent;
+-- TRUNCATE TABLE analysisinfo;
+-- TRUNCATE TABLE ensemblecontent;
+-- TRUNCATE TABLE ensembleinfo;
+-- TRUNCATE TABLE forecastcontent;
+-- TRUNCATE TABLE forecastinfo;
+-- TRUNCATE TABLE centreinfo;
+-- TRUNCATE TABLE typhooninfo;
