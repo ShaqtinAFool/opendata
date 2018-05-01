@@ -3,7 +3,6 @@ package app.typhoon;
 //<editor-fold defaultstate="collapsed" desc="import...">
 import app.db.DBSetting;
 import app.filetree.WalkFileTree;
-import static app.itf.Itf_Prop.tywebProp;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -186,6 +185,7 @@ public class TyphoonData extends DBSetting {
      * @param url 檔案路徑
      */
     public void parseTigge(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        System.out.println(adjust.getNowTime() + "  " + url);
         try {
             Path path = Paths.get(whereToDownload);
             Files.walkFileTree(path, w_file.findFile());
@@ -194,7 +194,6 @@ public class TyphoonData extends DBSetting {
             // 以上區域是設定變數
             Path abs_path = Paths.get(url);
             centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
-            System.out.println(centre + "  " + url);
             String typhoonReginal;
             switch (centre) {
                 case "JMA":
@@ -554,7 +553,7 @@ public class TyphoonData extends DBSetting {
      * 解析 CWB Best Track
      * @param url 
      */
-    public void parseCWBTrack(String url) {
+    public void parseCWBTrack(String url) {//<editor-fold defaultstate="collapsed" desc="...">
         Path abs_path = Paths.get(url);
         String centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
         System.out.println(centre + "  " + url);
@@ -582,7 +581,6 @@ public class TyphoonData extends DBSetting {
                 String lon = rawData.split("\\s+")[4];
                 String min_pressure = rawData.split("\\s+")[5];
                 String speed = rawData.split("\\s+")[6];
-                System.out.println(baseTime + " " + validTime);
                 int fcstHour = adjust.diffHour(validTime, baseTime);
                 
                 String import_tyInfo = String.format("%s,%s,%d",
@@ -600,7 +598,7 @@ public class TyphoonData extends DBSetting {
         } catch(IOException ex) {
             ex.printStackTrace();
         }
-    }
+    }//</editor-fold>
     
     /**
      * 正規化颱風清單和單位清單

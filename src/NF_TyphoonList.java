@@ -29,15 +29,17 @@ public class NF_TyphoonList {
         for (Object url : fv.getTyphoonPath()) {
             // 檔案大小為 0，直接跳過
             if(fi.getByte((String) url) == 0)continue;
-            // 解析資料
-//            td.parseTigge((String) url);
-            td.parseCWBTrack((String) url);
-            // 建立颱風、單位清單
-            td.setNameAndCentre();
-            // 建立 info
-            td.setXXXInfo();
-            // 匯入 content
-            td.setXXXContent();            
+            // 解析資料，先看 2016 年
+            if(url.toString().contains("2016")){
+                td.parseTigge((String) url);
+//                td.parseCWBTrack((String) url);
+                // 建立颱風、單位清單
+                td.setNameAndCentre();
+                // 建立 info
+                td.setXXXInfo();
+                // 匯入 content
+                td.setXXXContent();  
+            }
         }
     }
 }
