@@ -24,6 +24,10 @@ import org.jsoup.select.Elements;
 import app.itf.Itf_Prop;
 //</editor-fold>
 
+/**
+ * 
+ * @author tony
+ */
 public class TyphoonList implements Itf_Prop {
     
     private String url;
@@ -35,7 +39,7 @@ public class TyphoonList implements Itf_Prop {
     /**
      * 初始設定
      */
-    public TyphoonList() {
+    public TyphoonList() {//<editor-fold defaultstate="collapsed" desc="...">
         Properties prop = new Properties();
         try {
             prop.load(new FileReader(tywebProp));
@@ -50,7 +54,7 @@ public class TyphoonList implements Itf_Prop {
         } catch (IOException ex) {
             ex.printStackTrace();
         }        
-    }
+    }//</editor-fold>
     
     /**
      * 抓氣象局颱風資料庫資料
@@ -184,48 +188,78 @@ public class TyphoonList implements Itf_Prop {
         for(String s : tempNumber){
 //            System.out.println(enNumber + "," + s);
             // 修改 MSC 的詭異名稱
-            if(s.toLowerCase().equals("on") || s.toLowerCase().equals("o")){
-                s = "one";
-            }else if(s.toLowerCase().equals("tw")){
-                s = "two";
-            }else if(s.toLowerCase().equals("th")){
-                s = "three";
-            }else if(s.toLowerCase().equals("fo")){
-                s = "four";
-            }else if(s.toLowerCase().equals("fi")){
-                s = "five";
-            }else if(s.toLowerCase().equals("si")){
-                s = "six";
-            }else if(s.toLowerCase().equals("se")){
-                s = "seven";
-            }else if(s.toLowerCase().equals("ei")){
-                s = "eight";
-            }else if(s.toLowerCase().equals("ni")){
-                s = "nine";
-            }else if(s.toLowerCase().equals("twentyone")){
-                // 修改 MSC 的颱風編號不符合定義時 2013-10-03
-                return "21";
-            }else if(s.toLowerCase().equals("twentytwo")){
-                return "22"; 
-            }else if(s.toLowerCase().equals("twentythr") || s.toLowerCase().equals("twentythre")){
-                return "23";   
-            }else if(s.toLowerCase().equals("twentyfou") || s.toLowerCase().equals("twentyfour")){
-                return "24";   
-            }else if(s.toLowerCase().equals("twentyfiv") || s.toLowerCase().equals("twentyfive")){
-                return "25";
-            }else if(s.toLowerCase().equals("twentysix")){
-                return "26";
-            }else if(s.toLowerCase().equals("twentysev") || s.toLowerCase().equals("twentyseve")){
-                return "27";
-            }else if(s.toLowerCase().equals("twentyeig")){
-                return "28";
-            }else if(s.toLowerCase().equals("twentynin")){
-                return "29";
-            }else if(s.toLowerCase().equals("thirty")){
-                return "30";
-            }else if(s.toLowerCase().equals("thirtyone")){
-                // 修改 MSC 的颱風編號不符合定義時
-                return "31";
+            switch (s.toLowerCase()) {
+                case "on":
+                case "o":
+                    s = "one";
+                    break;
+                case "tw":
+                    s = "two";
+                    break;
+                case "th":
+                    s = "three";
+                    break;
+                case "fo":
+                    s = "four";
+                    break;
+                case "fi":
+                    s = "five";
+                    break;
+                case "si":
+                    s = "six";
+                    break;
+                case "se":
+                    s = "seven";
+                    break;
+                case "ei":
+                    s = "eight";
+                    break;
+                case "ni":
+                    s = "nine";
+                    break;
+                case "twentyone":
+                    // 修改 MSC 的颱風編號不符合定義時 2013-10-03
+                    return "21";
+                case "twentytwo":
+                    return "22";
+                case "twentythr":
+                case "twentythre":
+                    return "23";
+                case "twentyfou":
+                case "twentyfour":
+                    return "24";
+                case "twentyfiv":
+                case "twentyfive":
+                    return "25";
+                case "twentysix":
+                    return "26";
+                case "twentysev":
+                case "twentyseve":
+                    return "27";
+                case "twentyeig":
+                    return "28";
+                case "twentynin":
+                    return "29";
+                case "thirty":
+                    return "30";
+                case "thirtyone":
+                    // 修改 MSC 的颱風編號不符合定義時
+                    return "31";
+                case "thirtytwo":
+                    // 修改 MSC 的颱風編號不符合定義時
+                    return "32";
+                case "thirtythr":
+                case "thirtythre":
+                    // 修改 MSC 的颱風編號不符合定義時
+                    return "33";
+                case "thirtyfou":
+                case "thirtyfour":
+                    return "34"; 
+                case "thirtyfiv":
+                case "thirtyfive":
+                    return "35";                    
+                default:
+                    break;
             }
             onlyNumber += hm.get(s.toLowerCase());
         }

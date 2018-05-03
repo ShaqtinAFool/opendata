@@ -39,6 +39,7 @@ public class TyphoonData extends DBSetting {
     private Adjust adjust;
     private TyphoonList ty_list;
     private WalkFileTree w_file;
+    private Path abs_path;
     private PreparedStatement prepStmt;
     private ResultSet rs;
     private HashSet<String> hs_tyInfo;
@@ -73,7 +74,6 @@ public class TyphoonData extends DBSetting {
         adjust = new Adjust("yyyy-MM-dd HH:mm:ss");// 時間格式
         ty_list = new TyphoonList();
         w_file = new WalkFileTree();// 走訪目錄
-            
     }
     
     /**
@@ -108,7 +108,6 @@ public class TyphoonData extends DBSetting {
                 // 解析網站資料
                 doc_lev1 = Jsoup.connect(tiggeURL + "/" + centre[i]).timeout(timeout).get();
                 Elements elms_a_lev1 = doc_lev1.select("a");
-//                System.out.println(elms_a_lev1.html());
                 int rows = 0;
                 for (Element elm_a_lev1 : elms_a_lev1) {
                     if(rows >= 5) {
@@ -177,6 +176,9 @@ public class TyphoonData extends DBSetting {
             FileUtils.copyURLToFile(wantToDownloadURL, createFile);        
         } catch (IOException ex) {
             ex.printStackTrace();
+        } finally {
+            // 測試看看....
+            abs_path = null;
         }
     }//</editor-fold>
     
@@ -186,14 +188,9 @@ public class TyphoonData extends DBSetting {
      */
     public void parseTigge(String url) {//<editor-fold defaultstate="collapsed" desc="...">
         System.out.println(adjust.getNowTime() + "  " + url);
+        abs_path = Paths.get(url);
+        String centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
         try {
-            Path path = Paths.get(whereToDownload);
-            Files.walkFileTree(path, w_file.findFile());
-            // 以下區域是設定變數
-            String centre;
-            // 以上區域是設定變數
-            Path abs_path = Paths.get(url);
-            centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
             String typhoonReginal;
             switch (centre) {
                 case "JMA":
@@ -214,11 +211,10 @@ public class TyphoonData extends DBSetting {
             Document doc = Jsoup.parse(new File(url), "UTF8");
             // 以下直接引用原始寫法好
             // 以下直接引用原始寫法好
-            //<editor-fold defaultstate="collapsed" desc="...">
             String product = doc.select("product").text();
             String raw_ProductionCenter = doc.select("productionCenter").text();
             // 專門處理 Met
-            String productionCenter = "";
+            String productionCenter;
             if(raw_ProductionCenter.split("\\s+").length == 2){
                 if("Met".equals(raw_ProductionCenter.split("\\s+")[0])){
                     productionCenter = "UKMO";
@@ -260,8 +256,8 @@ public class TyphoonData extends DBSetting {
             for(Element elmData : elmsData){
                 String type = elmData.attr("type");
                 if(baseTime.isEmpty())break;
-                if("analysis".equals(type)){//<editor-fold defaultstate="collapsed" desc="...">
-                    // 處理分析場
+                if("analysis".equals(type)){
+                    //<editor-fold defaultstate="collapsed" desc="分析場">
                     Elements elmsDisturbance = elmData.select("disturbance");
                     for(Element elmDisturbance : elmsDisturbance){
                         String typhoonName = elmDisturbance.select("cycloneName").text().trim().toUpperCase();
@@ -316,7 +312,7 @@ public class TyphoonData extends DBSetting {
                                 }
                                 String development = elmFix.select("cycloneData").select("development").text();
                                 String min_pressure = elmFix.select("cycloneData").select("minimumPressure").select("min_pressure").text();
-                                String speed = elmFix.select("cycloneData").select("maximumWind").select("speed").text();
+                                String spd = elmFix.select("cycloneData").select("maximumWind").select("speed").text();
                                 String spdUnits = elmFix.select("cycloneData").select("maximumWind").select("speed").attr("units").toLowerCase();
                                 if(!typhoonName.isEmpty()){
                                     int getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoonName , Integer.parseInt(baseTime.substring(0 , 4)));
@@ -325,8 +321,8 @@ public class TyphoonData extends DBSetting {
                                     if(typhoonNumber.isEmpty())typhoonNumber = "";
                                     if(development.isEmpty())development = "";
                                     if(min_pressure.isEmpty() || min_pressure.contains("*"))min_pressure = "-999";
-                                    if(speed.equals("0") || speed.isEmpty() || speed.contains("*")){
-                                        speed = "-999.0";
+                                    if(spd.equals("0") || spd.isEmpty() || spd.contains("*")){
+                                        spd = "-999.0";
                                         spdUnits = "";
                                     }
                                     if(spdUnits.isEmpty())spdUnits = "";
@@ -336,7 +332,7 @@ public class TyphoonData extends DBSetting {
                                         productionCenter, applicationType, dataSource);
                                     String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
                                         typhoonName, productionCenter, applicationType, typhoonLocalID, typhoonBasin, getCWBTyphoonNumber,
-                                        baseTime, validTime, lat, lon, min_pressure, speed, spdUnits, development, 
+                                        baseTime, validTime, lat, lon, min_pressure, spd, spdUnits, development, 
                                         analysisType, dataSource, type);
                                     hs_tyInfo.add(import_tyInfo);
                                     hs_cetreInfo.add(import_cetrInfo);
@@ -344,10 +340,10 @@ public class TyphoonData extends DBSetting {
                                 }
                             }
                         }
-                    }//</editor-fold>
+                    }
+                    //</editor-fold>
                 }else{
-                    // 處理模式場
-                    //<editor-fold defaultstate="collapsed" desc="...">
+                    //<editor-fold defaultstate="collapsed" desc="模式場">
                     String member = elmData.attr("member");
                     Elements elmsDisturbance = elmData.select("disturbance");
                     for(Element elmDisturbance : elmsDisturbance){
@@ -358,7 +354,6 @@ public class TyphoonData extends DBSetting {
                         String typhoonNumber;
                         if(typhoonReginal.equals(typhoonBasin) || "".equals(typhoonBasin)){
                             if("Invest".equalsIgnoreCase(typhoonName)){
-                                typhoonNumber = elmDisturbance.select("cycloneNumber").text();
                                 if(elmDisturbance.select("cycloneNumber").text().length() == 1){
                                     typhoonNumber = "0" + elmDisturbance.select("cycloneNumber").text();
                                 }else{
@@ -382,7 +377,7 @@ public class TyphoonData extends DBSetting {
                                 getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoonName , Integer.parseInt(baseTime.substring(0 , 4)));
                             }
                             Elements elmsFix = elmDisturbance.select("fix");
-//                                if(elmsFix.isEmpty())break;//開啟這個會讀不到該 ensembleForecast 資料
+//                            if(elmsFix.isEmpty())break;//開啟這個會讀不到該 ensembleForecast 資料
                             if(elmsFix.isEmpty())continue;
                             // 防止沒有分區域 "".equals(typhoonBasin)
                             for(Element elmFix : elmsFix){
@@ -416,60 +411,61 @@ public class TyphoonData extends DBSetting {
                                 String min_pressure = elmFix.select("cycloneData").select("minimumPressure").select("pressure").text();
                                 if(min_pressure.contains("**"))min_pressure = "-999";
                                 String raw_Speed = elmFix.select("cycloneData").select("maximumWind").select("speed").text();
-                                String speed = raw_Speed;
+                                String spd = raw_Speed;
                                 String spdUnits = elmFix.select("cycloneData").select("maximumWind").select("speed").attr("units").toLowerCase();
-                                String typhoonNumber_New;
                                 String geopotentialHeight = "";
+                                String import_tyInfo = null, import_cetrInfo = null, import_rawdata = null;
                                 if(!typhoonName.isEmpty()){
                                     if(typhoonBasin.isEmpty())typhoonBasin = "";
                                     if(typhoonLocalID.isEmpty())typhoonLocalID = "";
                                     if(min_pressure.isEmpty() || min_pressure.contains("*"))min_pressure = "-999";
-                                    if(speed.equals("0") || speed.isEmpty() || speed.contains("*")){
-                                        speed = "-999.0";
+                                    if(spd.equals("0") || spd.isEmpty() || spd.contains("*")){
+                                        spd = "-999.0";
                                         spdUnits = "";
                                     }
                                     if(spdUnits.isEmpty())spdUnits = "";
-                                    if(geopotentialHeight.isEmpty())geopotentialHeight = "-999";//</editor-fold>
-                                    if(type.equals("forecast")){//<editor-fold defaultstate="collapsed" desc="...">
-                                        // 預報 
-                                        String import_tyInfo = String.format("%s,%s,%s",
+                                    if(geopotentialHeight.isEmpty())geopotentialHeight = "-999";
+                    //</editor-fold>
+                                    if(type.equals("forecast")){
+                                        //<editor-fold defaultstate="collapsed" desc="預報">
+                                        import_tyInfo = String.format("%s,%s,%s",
                                             typhoonName, validTime_Year, getCWBTyphoonNumber);
-                                        String import_cetrInfo = String.format("%s,%s,%s,-999,%s",
+                                        import_cetrInfo = String.format("%s,%s,%s,-999,%s",
                                             productionCenter, applicationType, modelResolution, dataSource);
-                                        String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
-                                            typhoonName,productionCenter,applicationType,typhoonLocalID,typhoonBasin,getCWBTyphoonNumber,
-                                            baseTime,validTime,lat,lon,min_pressure,speed,spdUnits,
-                                            fcstHour,modelResolution,dataSource,type);
-                                        hs_tyInfo.add(import_tyInfo);
-                                        hs_cetreInfo.add(import_cetrInfo);
-                                        al_rawdata.add(import_rawdata);//</editor-fold>                
-                                    }else if(type.equals("ensembleForecast")){//<editor-fold defaultstate="collapsed" desc="...">
-                                        // 系集
-                                        String import_tyInfo = String.format("%s,%s,%s",
+                                        import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                                            typhoonName, productionCenter, applicationType, typhoonLocalID, typhoonBasin, getCWBTyphoonNumber,
+                                            baseTime, validTime, lat, lon, min_pressure, spd, spdUnits,
+                                            fcstHour, modelResolution, dataSource, type);
+                                        //</editor-fold>                
+                                    }else if(type.equals("ensembleForecast")){
+                                        //<editor-fold defaultstate="collapsed" desc="系集">
+                                        import_tyInfo = String.format("%s,%s,%s",
                                             typhoonName, validTime_Year, getCWBTyphoonNumber);
-                                        String import_cetrInfo = String.format("%s,%s,%s,%s,%s",
+                                        import_cetrInfo = String.format("%s,%s,%s,%s,%s",
                                             productionCenter, applicationType, modelResolution, geopotentialHeight, dataSource);
-                                        String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
-                                            typhoonName,productionCenter,applicationType,typhoonLocalID,typhoonBasin,getCWBTyphoonNumber,
-                                            baseTime,validTime,lat,lon,min_pressure,speed,spdUnits,
-                                            fcstHour,member,modelResolution,geopotentialHeight,dataSource,type);
-                                        hs_tyInfo.add(import_tyInfo);
-                                        hs_cetreInfo.add(import_cetrInfo);
-                                        al_rawdata.add(import_rawdata);                                             
-                                    }//</editor-fold>
+                                        import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                                            typhoonName, productionCenter, applicationType, typhoonLocalID, typhoonBasin, getCWBTyphoonNumber,
+                                            baseTime, validTime, lat, lon, min_pressure, spd, spdUnits,
+                                            fcstHour, member, modelResolution, geopotentialHeight, dataSource, type); 
+                                        //</editor-fold>
+                                    }
+                                    hs_tyInfo.add(import_tyInfo);
+                                    hs_cetreInfo.add(import_cetrInfo);
+                                    al_rawdata.add(import_rawdata); 
                                 }
                             }
                         } 
                     }
                 }
-            }//</editor-fold>
+            }
             // 以上直接引用原始寫法好
             // 以上直接引用原始寫法好
             /********************** 會用到的物件 **********************/
-            String judgeExistSQL, insertSQL, updateSQL, selectSQL; 
+            String judgeExistSQL, insertSQL; 
             /********************** 建立颱風清單 **********************/
             String ty_name, ty_year, ty_number;
             for (String s : hs_tyInfo) {
+                //<editor-fold defaultstate="collapsed" desc="hs_tyInfo">
                 ty_name = s.split(regex)[0];
                 ty_year = s.split(regex)[1];
                 ty_number = s.split(regex)[2];
@@ -501,10 +497,12 @@ public class TyphoonData extends DBSetting {
                         break;
                     }
                 }
+                //</editor-fold>
             }
             /********************** 建立單位清單 **********************/
             String model, resolution, gh, data_source;
             for (String s : hs_cetreInfo) {
+                //<editor-fold defaultstate="collapsed" desc="hs_cetreInfo">
                 // centre 上面已出現過，直接使用就好
                 model = s.split(regex)[1];
                 resolution = s.split(regex)[2];
@@ -543,9 +541,13 @@ public class TyphoonData extends DBSetting {
                         break;
                     }                    	
                 }
+                //</editor-fold>
             }
         } catch (IOException | SQLException ex) {
             ex.printStackTrace();
+        } finally {
+            // 測試看看....
+            abs_path = null;
         }
     }//</editor-fold>
     
@@ -554,11 +556,9 @@ public class TyphoonData extends DBSetting {
      * @param url 
      */
     public void parseCWBTrack(String url) {//<editor-fold defaultstate="collapsed" desc="...">
-        Path abs_path = Paths.get(url);
-        String centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
-        System.out.println(centre + "  " + url);
+        System.out.println(adjust.getNowTime() + "  " + url);
+        abs_path = Paths.get(url);
         try(BufferedReader br = new BufferedReader(new FileReader(url))) {
-            String output;
             while(br.ready()) {
                 String rawData = br.readLine();
                 String raw_typhoon_name_En = rawData.split("\\s+")[0]; // 2008NEOGURI
@@ -580,16 +580,15 @@ public class TyphoonData extends DBSetting {
                 String lat = rawData.split("\\s+")[3];
                 String lon = rawData.split("\\s+")[4];
                 String min_pressure = rawData.split("\\s+")[5];
-                String speed = rawData.split("\\s+")[6];
+                String spd = rawData.split("\\s+")[6];
                 int fcstHour = adjust.diffHour(validTime, baseTime);
-                
                 String import_tyInfo = String.format("%s,%s,%d",
                     typhoon_name_En, tyYear, getCWBTyphoonNumber);
                 String import_cetrInfo = String.format("%s,%s,%s,%s,%s",
                     "CWB", "WEPS", "", "-999", "CWB");
                 String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%d,%s,%s,%s",
                     typhoon_name_En, "CWB","WEPS", "", "", getCWBTyphoonNumber,
-                    baseTime, validTime, lat, lon, min_pressure, speed, "m/s",
+                    baseTime, validTime, lat, lon, min_pressure, spd, "m/s",
                     fcstHour, "", "CWB", "forecast");                
                 hs_tyInfo.add(import_tyInfo);
                 hs_cetreInfo.add(import_cetrInfo);
@@ -606,7 +605,7 @@ public class TyphoonData extends DBSetting {
     public void setNameAndCentre() {//<editor-fold defaultstate="collapsed" desc="...">
         try {
             /********************** 會用到的物件 **********************/
-            String judgeExistSQL, insertSQL, updateSQL, selectSQL; 
+            String judgeExistSQL, insertSQL; 
             /********************** 建立颱風清單 **********************/
             String ty_name, ty_year, ty_number;
             for (String s : hs_tyInfo) {
@@ -783,13 +782,13 @@ public class TyphoonData extends DBSetting {
      * 正規化 Content
      */
     public void setXXXContent() {//<editor-fold defaultstate="collapsed" desc="...">
-        String ty_name_en = "", ty_year = "", ty_number = "";
-        String centre = "", model = "", resolution = "", geopotential_height = "", data_source = "";
+        String ty_name_en, ty_number;
+        String centre, model, resolution, geopotential_height, data_source;
         String a_info_id = "", f_info_id = "", e_info_id = "";
-        String ty_info_id = "", centre_info_id = "", base_time = "", member = "";
-        String insertSQL = "", judgeExistSQL = "";
+        String ty_info_id = "", centre_info_id = "", base_time, member;
+        String insertSQL, judgeExistSQL;
+        String outputException = "";
         int value;
-        ArrayList<String> al_deleteTemp = new ArrayList<>();
         try {
             // 應該不用標籤，因為每個都要跑過一次
 /********** 分析場 **********/            
@@ -1056,6 +1055,7 @@ public class TyphoonData extends DBSetting {
             /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
             /* vvvvvvvvvvvv 改系集場 Content Table 的 code  vvvvvvvvvvvv */
             for (String s : al_rawdata) {
+                outputException = s;// 找錯用
                 int rawdata_columns = s.split(regex).length;
                 String type = s.split(regex)[rawdata_columns - 1];
                 // 只保留 ensemble           
@@ -1130,8 +1130,12 @@ public class TyphoonData extends DBSetting {
             /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
             //</editor-fold>
         } catch (SQLException ex) {
+            System.out.println(outputException);
             ex.printStackTrace();
         } finally {
+            hs_analyInfo.clear();
+            hs_foreInfo.clear();
+            hs_ensbInfo.clear();
             al_rawdata.clear();
         }
     }//</editor-fold>
