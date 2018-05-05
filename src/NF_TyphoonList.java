@@ -28,20 +28,27 @@ public class NF_TyphoonList {
 //        td.getTigge(15000, DownloadTypeEnum.byHistory);
         for (Object url : fv.getTyphoonPath()) {
             // 檔案大小為 0，直接跳過
-            if(fi.getByte((String) url) == 0)continue;
+            if(fi.getFileSizeByByte((String) url) <= 10)continue;
             // 解析資料，先看 2016 年
 //            if(url.toString().contains("UKMO")){
-                if(url.toString().contains("2017")){
+//            if(url.toString().contains("2015")){
+            String dataType = fi.getDirectory((String) url, 2);
+            switch (dataType) {
+                case "tigge":
                     td.parseTigge((String) url);
-//                    td.parseCWBTrack((String) url);
-                    // 建立颱風、單位清單
-                    td.setNameAndCentre();
-                    // 建立 info
-                    td.setXXXInfo();
-                    // 匯入 content
-                    td.setXXXContent();  
-                }
-//            }
+                    break;
+                case "cwb_track":
+                    td.parseCWBTrack((String) url);
+                    break;
+                default:
+                    break;
+            }
+            // 建立颱風、單位清單
+//            td.setNameAndCentre();
+            // 建立 info
+//            td.setXXXInfo();
+            // 匯入 content
+//            td.setXXXContent();  
         }
     }
 }
