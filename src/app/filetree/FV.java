@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Properties;
 import app.itf.Itf_Prop;
+import weather.Adjust;
 
 /**
  * 檔案路徑
@@ -44,7 +45,6 @@ public class FV implements Itf_Prop {
         }
         return al_url;
     }
-    
     
 //    public static void main(String[] args) {
 //        FV fv = new FV();

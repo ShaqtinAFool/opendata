@@ -30,11 +30,11 @@ import app.itf.Itf_Prop;
  */
 public class TyphoonList implements Itf_Prop {
     
-    private String url;
+    private String url, tylist;
     private String whereToDownload;
     private Document doc;
     private File file;
-    private String tylist;
+    private ArrayList<String> al_tylist;
     
     /**
      * 初始設定
@@ -47,6 +47,7 @@ public class TyphoonList implements Itf_Prop {
             whereToDownload = prop.getProperty("cwb_typhoon_list_path");
             tylist = whereToDownload + "tylist.html";
             file = new File(tylist);
+            al_tylist = new ArrayList<>();
             /**
              * 測試1 處理 java.lang.OutOfMemoryError: Java heap space，將 doc 擺在建構子
              */            
@@ -90,19 +91,15 @@ public class TyphoonList implements Itf_Prop {
      * @return 颱風編號(年份 + 編號)
      */
     public int getCWBTyNumber(String ty_name , int setYear) {//<editor-fold defaultstate="collapsed" desc="...">
-        int tyNumber = 0;
         Elements elms_tr = doc.select("div").select("table").select("tbody").select("tr");
         for(Element elm_tr : elms_tr){
             String typhoonWarningList = elm_tr.text();
             String typhoonYear = typhoonWarningList.split("\\s+")[0];
             if(isNumeric(typhoonYear)){
                 int year = Integer.parseInt(typhoonYear);
-                tyNumber = Integer.parseInt(typhoonWarningList.split("\\s+")[1]);
-                String typhoon_name_tw = typhoonWarningList.split("\\s+")[2].trim();
+                int tyNumber = Integer.parseInt(typhoonWarningList.split("\\s+")[1]);
                 String typhoon_name_en = typhoonWarningList.split("\\s+")[3].trim();     
-                String output = String.format("%d,%s,%s,%s", year, tyNumber, typhoon_name_tw, typhoon_name_en);
                 if(year == setYear){
-//                    if(ty_name.equals(typhoon_name_en)){// 原本寫法
                     if(typhoon_name_en.contains(ty_name)){
                         return tyNumber;
                     }
@@ -112,6 +109,48 @@ public class TyphoonList implements Itf_Prop {
         // 沒此颱風名稱時，回傳 -999
         return -999;
     }//</editor-fold>    
+
+    /**
+     * 擷取氣象局颱風英文名稱
+     * @param setYear
+     * @return 颱風英文名稱_年份
+     */
+    public ArrayList<String> getCWBTyEnName(int setYear) {//<editor-fold defaultstate="collapsed" desc="...">
+        Elements elms_tr = doc.select("div").select("table").select("tbody").select("tr");
+        for(Element elm_tr : elms_tr){
+            String typhoonWarningList = elm_tr.text();
+            String typhoonYear = typhoonWarningList.split("\\s+")[0];
+            if(isNumeric(typhoonYear)){
+                int year = Integer.parseInt(typhoonYear);
+                String typhoon_name_en = typhoonWarningList.split("\\s+")[3].trim();
+                if(year == setYear){
+                    al_tylist.add(typhoon_name_en + "_" + setYear);
+                }
+            }
+        }
+        return al_tylist;
+    }//</editor-fold>        
+    
+    /**
+     * 擷取氣象局颱風中文名稱
+     * @param setTyNumber
+     * @return 颱風中文名稱
+     */
+    public String getCWBTyTWName(int setTyNumber) {//<editor-fold defaultstate="collapsed" desc="...">
+        Elements elms_tr = doc.select("div").select("table").select("tbody").select("tr");
+        for(Element elm_tr : elms_tr){
+            String typhoonWarningList = elm_tr.text();
+            String typhoonYear = typhoonWarningList.split("\\s+")[0];
+            if(isNumeric(typhoonYear)){
+                int tyNumber = Integer.parseInt(typhoonWarningList.split("\\s+")[1]);
+                String typhoon_name_tw = typhoonWarningList.split("\\s+")[2].trim();
+                if(setTyNumber == tyNumber){
+                    return typhoon_name_tw;
+                }
+            }
+        }
+        return null;
+    }//</editor-fold>  
     
     /**
      * 正規表示式，判斷字串是否是數字
