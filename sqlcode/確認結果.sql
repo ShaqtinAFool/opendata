@@ -1,3 +1,26 @@
+# 最佳路徑
+USE ty;
+SELECT 
+	btc.bt_cont_id,
+	ti.ty_name_en,
+	ti.ty_name_tw,
+	ti.ty_year,
+	ti.ty_number,
+	ci.centre,
+	ci.model,
+	bti.base_time,
+	btc.lat,
+	btc.lon,
+	btc.min_pres
+FROM BestTrackInfo AS bti
+INNER JOIN BestTrackContent AS btc ON btc.bt_info_id = bti.bt_info_id
+INNER JOIN CentreInfo AS ci ON ci.centre_info_id = bti.centre_info_id
+INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = bti.ty_info_id
+#where btc.bt_info_id between 18 and 18
+ORDER BY ti.ty_number,bti.base_time
+#LIMIT 10
+;
+
 # 分析
 USE ty;
 SELECT 
@@ -18,6 +41,7 @@ INNER JOIN CentreInfo AS ci ON ci.centre_info_id = ai.centre_info_id
 INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = ai.ty_info_id
 #where ac.a_info_id between 1 and 5
 ORDER BY ti.ty_number,ai.base_time
+LIMIT 10
 ;
 
 # 預報
@@ -41,6 +65,7 @@ INNER JOIN CentreInfo AS ci ON ci.centre_info_id = fi.centre_info_id
 INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = fi.ty_info_id
 WHERE ci.centre = 'CWB'
 ORDER BY ti.ty_number,ci.centre,ci.model,fi.base_time
+LIMIT 10
 ;
 
 # 系集
@@ -65,25 +90,5 @@ INNER JOIN CentreInfo AS ci ON ci.centre_info_id = ei.centre_info_id
 INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = ei.ty_info_id
 #where ec.e_info_id between 1 and 5
 ORDER BY ei.member,ti.ty_number,ei.base_time
-;
-
-# 最佳路徑
-USE ty;
-SELECT 
-	btc.bt_cont_id,
-	ti.ty_name_en,
-	ti.ty_name_tw,
-	ti.ty_year,
-	ti.ty_number,
-	ci.centre,
-	ci.model,
-	bti.base_time,
-	btc.lat,
-	btc.lon,
-	btc.min_pres
-FROM BestTrackInfo AS bti
-INNER JOIN BestTrackContent AS btc ON btc.bt_info_id = bti.bt_info_id
-INNER JOIN CentreInfo AS ci ON ci.centre_info_id = bti.centre_info_id
-INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = bti.ty_info_id
-ORDER BY ti.ty_number,bti.base_time
+LIMIT 10
 ;

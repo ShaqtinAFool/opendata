@@ -8,7 +8,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Properties;
 import app.itf.Itf_Prop;
-import weather.Adjust;
 
 /**
  * 檔案路徑
@@ -17,29 +16,51 @@ import weather.Adjust;
 public class FV implements Itf_Prop {
     
     private final WalkFileTree w_file;
+    private final Properties prop;
+    private Enum e;
 
     /**
      * 初始設定
+     * @param e
      */
-    public FV() {
+    public FV(Enum e) {
+        this.e = e;
         w_file = new WalkFileTree();
+        prop = new Properties();
     }
     
     /**
      * 將檔案路徑收集起來
      * @return ArrayList<?>
      */
-    public ArrayList<?> getTyphoonPath(){
-        Properties prop = new Properties();
+    public ArrayList<?> getPath(){
         ArrayList<String> al_url = new ArrayList<>();
         try {
-            prop.load(new FileReader(tywebProp));
-            String whereToDownload = prop.getProperty("download_dir_path");
-            Path path = Paths.get(whereToDownload);
-            Files.walkFileTree(path, w_file.findFile());
-            for (String url : w_file.returnFV()) {
-                al_url.add(url);
+            if(e.equals(FVEnum.typhoon)){
+                prop.load(new FileReader(tywebProp));
+                String whereToDownload = "";
+                if("1".equals(prop.get("tigge_download_realtime"))){
+                    // 即時資料
+                    whereToDownload = prop.getProperty("download_dir_path_temp");
+                }else if(!"1".equals(prop.get("tigge_download_realtime"))){
+                    // 歷史資料
+                    whereToDownload = prop.getProperty("download_dir_path");
+                }
+                Path path = Paths.get(whereToDownload);
+                Files.walkFileTree(path, w_file.findFile());
+                for (String url : w_file.returnFV()) {
+                    if(!url.contains("DS_Store"))al_url.add(url);
+                }                
+            }else if(e.equals(FVEnum.station)){
+                prop.load(new FileReader(stnwebProp));
+                String whereToDownload = prop.getProperty("history_file_path");
+                Path path = Paths.get(whereToDownload);
+                Files.walkFileTree(path, w_file.findFile());
+                for (String url : w_file.returnFV()) {
+                    if(!url.contains("DS_Store"))al_url.add(url);
+                }                
             }
+
         } catch (IOException ex) {
             ex.printStackTrace();
         }

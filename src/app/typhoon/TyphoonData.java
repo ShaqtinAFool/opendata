@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +46,7 @@ public class TyphoonData extends DBSetting {
     private Properties prop;
     private Connection conn;
     private int setYear;
-    private String db_type, whereToDownload, tiggeURL, ty2000URL, regex;
+    private String db_type, whereToDownload, whereToDownload_temp, tiggeURL, ty2000URL, regex;
     private Adjust adjust;
     private TyphoonList ty_list;
     private WalkFileTree w_file;
@@ -61,7 +62,7 @@ public class TyphoonData extends DBSetting {
      * 
      * @param dbEnum
      */
-    public TyphoonData(Enum dbEnum) {
+    public TyphoonData(Enum dbEnum) {//<editor-fold defaultstate="collapsed" desc="...">
         // 必寫
         super(dbEnum);
         // 設定 property
@@ -83,23 +84,24 @@ public class TyphoonData extends DBSetting {
         adjust = new Adjust("yyyy-MM-dd HH:mm:ss");// 時間格式
         ty_list = new TyphoonList();
         w_file = new WalkFileTree();// 走訪目錄
-    }
+    }//</editor-fold>
     
     /**
      * 設定 property
      */
-    private void setProperty() {
+    private void setProperty() {//<editor-fold defaultstate="collapsed" desc="...">
         try {
             prop = new Properties();
             prop.load(new FileReader(tywebProp));
             whereToDownload = prop.getProperty("download_dir_path");
+            whereToDownload_temp = prop.getProperty("download_dir_path_temp");
             tiggeURL = prop.getProperty("tigge_web_url");
             ty2000URL = prop.getProperty("ty2000_url");
             setYear = Integer.parseInt(prop.get("ty2000_year").toString());
         } catch (IOException ex) {
             ex.printStackTrace();
         }     
-    }
+    }//</editor-fold>
     
     /**
      * 下載 xml
@@ -162,7 +164,7 @@ public class TyphoonData extends DBSetting {
                                     if(xmlURL.contains(".xml")){
                                         // 取出檔案名稱
                                         String xmlFile = elm_a_lev2.text();
-                                        createDirPath = String.format("%s/tigge/%s/%s/", whereToDownload, centre[i], yymmdd);
+                                        createDirPath = String.format("%s/tigge/%s/%s/", whereToDownload_temp, centre[i], yymmdd);
                                         downloadData(xmlFile, xmlURL, createDirPath);
                                     }
                                 }
@@ -176,7 +178,7 @@ public class TyphoonData extends DBSetting {
                                 if(xmlURL.contains(".xml")){
                                     // 取出檔案名稱
                                     String xmlFile = elm_a_lev2.text();
-                                    createDirPath = String.format("%s/tigge/%s/%s/", whereToDownload, centre[i], yymmdd);
+                                    createDirPath = String.format("%s/tigge/%s/%s/", whereToDownload_temp, centre[i], yymmdd);
                                     downloadData(xmlFile, xmlURL, createDirPath);
                                 }
                             }                         
@@ -193,6 +195,50 @@ public class TyphoonData extends DBSetting {
     }//</editor-fold>    
 
     /**
+     * 搬移 xml
+     * @param sourceURL
+     * @param destinationURL 
+     */
+    public void moveFile(String sourceURL, String destinationURL) {//<editor-fold defaultstate="collapsed" desc="...">
+//        System.out.println(sourceURL + " :::> " + destinationURL);
+        File sourceFile = new File(sourceURL);
+        File destinationFile = new File(destinationURL);
+        Path destinationPath = Paths.get(destinationURL);
+        File destinationDirectory = new File(destinationPath.getParent().toString());
+        if(!destinationDirectory.isDirectory()){
+            destinationDirectory.mkdirs();
+        }        
+        sourceFile.renameTo(destinationFile);
+    }//</editor-fold>
+    
+    /**
+     * 刪除 tigge 資料夾 by 遞回
+     * @param url
+     */
+    public void deleteTempDirectory(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        File destinationPath = new File(url);
+        // 目標是只剩下 .\temp\tigge\UKMO
+        File destinationDirectory = destinationPath.getParentFile();
+        if(!destinationPath.exists()){
+//            System.out.println(url + " 不存在就不動作");
+//            System.out.println("刪除 " + destinationDirectory.getPath() + " 並 return");
+            destinationDirectory.delete();
+            return;
+        }
+        if(destinationPath.isFile()){
+//            System.out.println(url + " 是檔案就刪除");
+            destinationPath.delete();
+            return;
+        }
+        File[] files = destinationPath.listFiles();
+        for(int i = 0; i < files.length; i++) {
+            System.out.println(url + " 遞回刪除");
+            deleteTempDirectory(url);
+        }
+        destinationPath.delete();
+    }//</editor-fold>
+    
+    /**
      * 解析 tigge XML
      * @param url 檔案路徑
      */
@@ -200,6 +246,8 @@ public class TyphoonData extends DBSetting {
         System.out.println(adjust.getNowTime() + "  " + url);
         abs_path = Paths.get(url);
         String centre = abs_path.getName(abs_path.getNameCount() - 3).toString();
+        String yymmdd = abs_path.getName(abs_path.getNameCount() - 2).toString();
+        String fileName = abs_path.getFileName().toString();
         String dataSource = "tigge";        
         try {
             String typhoonReginal;
@@ -473,14 +521,20 @@ public class TyphoonData extends DBSetting {
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
+            // 搬移 xml
+            String destURL = String.format("%s/tigge/%s/%s/%s", whereToDownload, centre, yymmdd, fileName);
+            if(new File(url).exists()){
+                // 有東西才動作
+                moveFile(url, destURL);                
+            }
             // 測試看看....
             abs_path = null;
             // 建立颱風、單位清單
             setNameAndCentre();
             // 建立 info
-            setXXXInfo();
+            importParsedInfo();
             // 匯入 content
-            setXXXContent();  
+            importParsedRawdata();  
         }
     }//</editor-fold>
     
@@ -534,9 +588,9 @@ public class TyphoonData extends DBSetting {
             // 建立颱風、單位清單
             setNameAndCentre();
             // 建立 info
-            setXXXInfo();
+            importParsedInfo();
             // 匯入 content
-            setXXXContent(); 
+            importParsedRawdata(); 
         }
     }//</editor-fold>
     
@@ -731,9 +785,9 @@ public class TyphoonData extends DBSetting {
             // 建立颱風、單位清單
             setNameAndCentre();
             // 建立 info
-            setXXXInfo();
+            importParsedInfo();
             // 匯入 content
-            setXXXContent();
+            importParsedRawdata();
         }
     }//</editor-fold>
     
@@ -742,6 +796,7 @@ public class TyphoonData extends DBSetting {
      * @param url
      */
     public void parseJTWC(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        System.out.println(adjust.getNowTime() + "  " + url);
         String dataSource = "jtwc web";
         ArrayList<String> al_PrintResult = new ArrayList<>();
         ArrayList<String> al_temp = new ArrayList<>();
@@ -994,6 +1049,7 @@ public class TyphoonData extends DBSetting {
             }
             String lat = final_output.split(",")[8];
             String lon = final_output.split(",")[9];
+            String pres = final_output.split(",")[10];
             String spd = final_output.split(",")[11];
             int fcstHour = adjust.diffHour(validTime, baseTime);
             // 以下是新增的
@@ -1003,7 +1059,7 @@ public class TyphoonData extends DBSetting {
                 "JTWC", "Best Track", "", "-999", dataSource);
             String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%d,%s,%s,%s",
                 ty_name_en, "JTWC","Best Track", "", "", getCWBTyphoonNumber,
-                baseTime, validTime, lat, lon, "-999", spd, "kt",
+                baseTime, validTime, lat, lon, pres, spd, "kt",
                 fcstHour, "", dataSource, "besttrack");    
             hs_tyInfo.add(import_tyInfo);
             hs_cetreInfo.add(import_cetrInfo);
@@ -1013,15 +1069,130 @@ public class TyphoonData extends DBSetting {
         // 建立颱風、單位清單
         setNameAndCentre();
         // 建立 info
-        setXXXInfo();
+        importParsedInfo();
         // 匯入 content
-        setXXXContent();        
+        importParsedRawdata();        
     }//</editor-fold>
     
     /**
-     * 回傳數字
+     * 解析 CWB WEPS
+     * @param url 
+     */
+    public void parseCWBWEPS(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        System.out.println(adjust.getNowTime() + "  " + url);
+        ArrayList<String> al_PrintResult = new ArrayList<>();
+        String dataSource = "cwb";
+        try(BufferedReader br = new BufferedReader(new FileReader(url))) {   
+            Path path = Paths.get(url);
+            String directoryName = path.getParent().getName(path.getNameCount() - 2).toString(); // 15100418_MUJIGAE
+            String fileName = path.getFileName().toString(); // EFS-01_15100418_SLP
+            if(!fileName.startsWith("N")){
+                String typhoon_name_En = directoryName.split("_")[1];
+                String ensembleMember = "";
+                if(fileName.startsWith("EFS-")){
+                    ensembleMember = fileName.split("_")[0];
+                }else if(fileName.matches("M0[0-9].*")){
+                    ensembleMember = fileName.split("-")[0];
+                }else if(fileName.contains("_EFS-mean_")){
+                    ensembleMember = fileName.split("_")[1];
+                }
+                // 設定初始場時間
+                int judgeNumber = 0;
+                String output, baseTime = "";
+                while(br.ready()){
+                    // 先測試一個颱風就好
+//                    if(!"MATMO".equals(typhoon_name_En))break;
+                    String rawData = br.readLine();
+                    String raw_BaseTime = rawData.split("\\s+")[0];
+                    adjust.inputValue(raw_BaseTime);
+                    String validTime = "";
+                    if(judgeNumber == 0){
+                        baseTime = adjust.outputYMDH();
+                        validTime = baseTime;
+                    }else{
+                        validTime = adjust.outputYMDH();
+                    }
+//                    Calendar calendar = Calendar.getInstance();
+                    adjust.inputValue(baseTime);
+                    long initialTime = adjust.outputNumber();
+                    adjust.inputValue(validTime);
+                    long endTime = adjust.outputNumber();
+                    int fcstHour = (int) ((endTime - initialTime)/1000/60/60);
+//                    calendar.setTime(adjustTimeFormat.outputJavaDate());
+//                    calendar.add(Calendar.HOUR_OF_DAY, forecastHour);
+                    DecimalFormat df = new DecimalFormat("###.##");
+                    String latitudeitude, longitude;
+                    double temp_Latitude, temp_Longitude;
+                    if(rawData.split("\\s+")[1].matches(".*[a-zA-Z].*") || rawData.split("\\s+")[2].matches(".*[a-zA-Z].*")){
+                        temp_Latitude = -999.0;
+                        temp_Longitude = -999.0;
+                    }else{
+                        temp_Latitude = Double.parseDouble(rawData.split("\\s+")[1]);
+                        temp_Longitude = Double.parseDouble(rawData.split("\\s+")[2]);
+                    }
+                    if(temp_Latitude <= -200.0 || temp_Longitude <= -200.0){
+                        latitudeitude = "-999.0";
+                        longitude = "-999.0";
+                    }else{
+                        latitudeitude = df.format(Double.parseDouble(rawData.split("\\s+")[1]));
+                        longitude = df.format(Double.parseDouble(rawData.split("\\s+")[2]));
+                    }
+                    String minima_pressuresure;
+                    if(rawData.split("\\s+").length <= 3){
+                        minima_pressuresure = "";
+                    }else{
+                        minima_pressuresure = rawData.split("\\s+")[3];
+                    }
+                    output = String.format("%s,CWB,WEPS,,,,%s,%s,%s,%s,%s,-999.0,,%s,%s,,-999,%s", 
+                                typhoon_name_En, baseTime, validTime, latitudeitude, longitude ,
+                                minima_pressuresure, fcstHour, ensembleMember, dataSource);
+//                    System.out.println(output);
+                    al_PrintResult.add(output);
+                    judgeNumber++;
+                }
+            }
+        } catch(IOException ex) {
+            ex.printStackTrace();
+        }
+        // 改變颱風編號(增快速度)
+        for(String s : al_PrintResult) {
+            String typhoonName = s.split(",")[0];
+            String baseTime = s.split(",")[6];            
+            int basetimeYear = Integer.parseInt(baseTime.substring(0, 4));            
+            int getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoonName, basetimeYear);
+            String final_output = s.replaceAll(",WEPS,,,,", ",WEPS,,," + getCWBTyphoonNumber + ",");
+            String validTime = final_output.split(",")[7];
+            String lat = final_output.split(",")[8];
+            String lon = final_output.split(",")[9];
+            String pres = final_output.split(",")[10];
+            if(pres.isEmpty())pres = "-999.0";
+            String spd = final_output.split(",")[11];
+            String fcstHour = final_output.split(",")[13];
+            String member = final_output.split(",")[14];
+            String import_tyInfo = String.format("%s,%s,%s",
+                typhoonName, basetimeYear, getCWBTyphoonNumber);
+            String import_cetrInfo = String.format("%s,%s,%s,%s,%s",
+                "CWB", "WEPS", "", "-999", dataSource);
+            String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                typhoonName, "CWB", "WEPS", "", "WP", getCWBTyphoonNumber,
+                baseTime, validTime, lat, lon, pres, spd, "",
+                fcstHour, member, "", "-999", dataSource, "ensembleForecast"); 
+            hs_tyInfo.add(import_tyInfo);
+            hs_cetreInfo.add(import_cetrInfo);
+            al_rawdata.add(import_rawdata);
+        }   
+        // 建立颱風、單位清單
+        setNameAndCentre();
+        // 建立 info
+        importParsedInfo();
+        // 匯入 content
+        importParsedRawdata();         
+    }//</editor-fold>
+    
+    /**
+     * 是否跑
      * @param parameter
-     * @return 
+     * @return 跑或不跑 
      */
     public boolean setRunOrNotRun(String parameter) { //<editor-fold defaultstate="collapsed" desc="...">
         return "1".equals(prop.get(parameter));
@@ -1122,16 +1293,18 @@ public class TyphoonData extends DBSetting {
     /**
      * 正規化 Info
      */
-    public void setXXXInfo() {//<editor-fold defaultstate="collapsed" desc="...">
+    public void importParsedInfo() {//<editor-fold defaultstate="collapsed" desc="...">
+        String outputException = "";
         try {
             /********************** 準備各 Type Info 資料 **********************/
             // 原則上上面沒出現過的變數，就和資料庫一樣就好
             String establishFK_ty, establishFK_cetr;
-            String ty_info_id, centre_info_id, base_time, type;
+            String ty_info_id, centre_info_id, base_time, type, member;
+            String import_anlyInfo, import_foreInfo, import_ensbInfo, import_bstkInfo;
             for (String s : al_rawdata) {
+                outputException = "exception: " + s;// 找錯用
                 int rawdata_columns = s.split(regex).length;
                 ty_info_id = "";
-                centre_info_id = "";
                 // 大家位置都一樣(rawdata_columns)
                 String ty_name = s.split(regex)[0];
                 String ty_number = s.split(regex)[5];
@@ -1182,20 +1355,20 @@ public class TyphoonData extends DBSetting {
                     // 放外面會使 centre_info_id = null
                     switch (type) {
                         case "analysis":
-                            String import_anlyInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
+                            import_anlyInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
                             hs_anlyInfo.add(import_anlyInfo);
                             break;
                         case "forecast":
-                            String import_foreInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
+                            import_foreInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
                             hs_foreInfo.add(import_foreInfo);
                             break;
                         case "ensembleForecast":
-                            String member = s.split(regex)[14];
-                            String import_ensbInfo = String.format("%s,%s,%s,%s", ty_info_id, centre_info_id, base_time, member);
+                            member = s.split(regex)[14];
+                            import_ensbInfo = String.format("%s,%s,%s,%s", ty_info_id, centre_info_id, base_time, member);
                             hs_ensbInfo.add(import_ensbInfo);
                             break;
                         case "besttrack":
-                            String import_bstkInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
+                            import_bstkInfo = String.format("%s,%s,%s", ty_info_id, centre_info_id, base_time);
                             hs_bstkInfo.add(import_bstkInfo);
                             break;
                         default:
@@ -1204,6 +1377,7 @@ public class TyphoonData extends DBSetting {
                 }    
             } 
         } catch (SQLException ex) {
+            System.out.println("exception: " + outputException);
             ex.printStackTrace();
         }
     }//</editor-fold>
@@ -1211,7 +1385,7 @@ public class TyphoonData extends DBSetting {
     /**
      * 正規化 Content
      */
-    public void setXXXContent() {//<editor-fold defaultstate="collapsed" desc="...">
+    public void importParsedRawdata() {//<editor-fold defaultstate="collapsed" desc="...">
         String ty_name_en, ty_number;
         String centre, model, resolution, geopotential_height, data_source;
         String a_info_id = "", f_info_id = "", e_info_id = "", bt_info_id = "";
@@ -1256,8 +1430,6 @@ public class TyphoonData extends DBSetting {
                     }
                 }
             }
-            // 必放，才不會影響到後面
-//            prepStmt.clearParameters();
             // 從 rawdata 匯入 detail table
             /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
             /* vvvvvvvvvvvv 改分析場 Content Table 的 code  vvvvvvvvvvvv */
@@ -1327,8 +1499,6 @@ public class TyphoonData extends DBSetting {
                 prepStmt.setString(8, data_type);
                 prepStmt.executeUpdate();
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
             /* ^^^^^^^^^^^^ 改分析場 Content Table 的 code  ^^^^^^^^^^^^ */
             /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
             //</editor-fold>
@@ -1367,8 +1537,6 @@ public class TyphoonData extends DBSetting {
                     }
                 } 
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
             /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
             /* vvvvvvvvvvvv 改預報場 Content Table 的 code  vvvvvvvvvvvv */
             for (String s : al_rawdata) {
@@ -1435,11 +1603,8 @@ public class TyphoonData extends DBSetting {
                 prepStmt.setString(6, wind_unit);
                 prepStmt.setString(7, valid_time);                
                 prepStmt.setString(8, valid_hour);
-//                System.out.println(f_info_id + "," + lat + "," + lon + "," + min_pres);
                 prepStmt.executeUpdate();
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
             /* ^^^^^^^^^^^^ 改預報場 Content Table 的 code  ^^^^^^^^^^^^ */
             /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
             //</editor-fold>
@@ -1480,12 +1645,10 @@ public class TyphoonData extends DBSetting {
                     }
                 }
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
             /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
             /* vvvvvvvvvvvv 改系集場 Content Table 的 code  vvvvvvvvvvvv */
             for (String s : al_rawdata) {
-                outputException = s;// 找錯用
+                outputException = "exception: " + s;// 找錯用
                 int rawdata_columns = s.split(regex).length;
                 String type = s.split(regex)[rawdata_columns - 1];
                 // 只保留 ensemble           
@@ -1509,6 +1672,7 @@ public class TyphoonData extends DBSetting {
                 rs = prepStmt.executeQuery();
                 while(rs.next()){
                     ty_info_id = rs.getString(1);
+                    
                 }
                 // (3) 關連 centre table 的 rawdata
                 centre = s.split(regex)[1];
@@ -1554,9 +1718,7 @@ public class TyphoonData extends DBSetting {
                 prepStmt.setString(8, valid_hour);
                 prepStmt.executeUpdate();
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
-            /* ^^^^^^^^^^^^ 改系集場 ontent Table 的 code  ^^^^^^^^^^^^ */
+            /* ^^^^^^^^^^^^ 改系集場 Content Table 的 code  ^^^^^^^^^^^^ */
             /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
             //</editor-fold>
 /********** 最佳路徑場 **********/          
@@ -1565,6 +1727,7 @@ public class TyphoonData extends DBSetting {
                 // 從文字檔下手，比較資料庫的狀況
                 ty_info_id = s.split(regex)[0];
                 centre_info_id = s.split(regex)[1];
+//                System.out.println("centre_info_id = " + centre_info_id);
                 base_time = s.split(regex)[2];
                 // 如果不存在，新建各 Type Info (用 SQL 語法去找存不存在)
                 insertSQL = "";
@@ -1586,6 +1749,11 @@ public class TyphoonData extends DBSetting {
                         prepStmt = conn.prepareStatement(insertSQL);
                         prepStmt.setString(1, ty_info_id);
                         prepStmt.setString(2, centre_info_id);
+//                        System.out.println(
+//                                String.format(
+//                                "ty_info_id = %s, centre_info_id = %s, base_time = %s", 
+//                                        ty_info_id, centre_info_id, base_time));
+
                         prepStmt.setString(3, base_time);
                         prepStmt.executeUpdate();
                     }else{
@@ -1594,16 +1762,14 @@ public class TyphoonData extends DBSetting {
                     }
                 }
             }
-            // 必放，才不會影響到後面
-//            prepStmt.clearParameters();
             // 從 rawdata 匯入 detail table
             /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
             /* vvvvvvvvvvvv 改最佳路徑官方場 Content Table 的 code  vvvvvvvvvvvv */
             for (String s : al_rawdata) {
-                outputException = s;// 找錯用
+                outputException = "exception: " + s;// 找錯用
                 int rawdata_columns = s.split(regex).length;
                 String type = s.split(regex)[rawdata_columns - 1];
-                // 只保留 offical
+                // 只保留 besttrack
                 if(!"besttrack".equals(type))continue;
                 // 找出關連性
                 // (1) 找出 XXXcontent table 的 rawdata
@@ -1653,6 +1819,7 @@ public class TyphoonData extends DBSetting {
                 while(rs.next()){
                     bt_info_id = rs.getString(1);
                 }
+//                System.out.println(String.format("ty_info_id = %s, centre_info_id = %s, bt_info_id = %s", ty_info_id, centre_info_id, bt_info_id));
                 // 匯入 XXXContent 
                 insertSQL = "INSERT INTO BestTrackContent VALUES (0,?,?,?,?,?,?,?,?)";// MySQL
                 prepStmt = conn.prepareStatement(insertSQL);
@@ -1666,8 +1833,6 @@ public class TyphoonData extends DBSetting {
                 prepStmt.setString(8, data_type);
                 prepStmt.executeUpdate();
             }
-            // 必放，才不會影響下面的 prepStmt (重複匯入)
-//            prepStmt.clearParameters();
             /* ^^^^^^^^^^^^ 改最佳路徑官方場 Content Table 的 code  ^^^^^^^^^^^^ */
             /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
             //</editor-fold>
@@ -1681,13 +1846,8 @@ public class TyphoonData extends DBSetting {
             hs_anlyInfo.clear();
             hs_foreInfo.clear();
             hs_ensbInfo.clear();
+            hs_bstkInfo.clear();
             al_rawdata.clear();
-//            try {
-//                // 釋放 rs 資源
-//                rs.close();
-//            } catch (SQLException ex) {
-//                ex.printStackTrace();
-//            }
         }
     }//</editor-fold>
 }

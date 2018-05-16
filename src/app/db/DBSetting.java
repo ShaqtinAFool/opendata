@@ -45,7 +45,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
             }else if(db.equals("MySQL")){
                 // MySQL
                 driver = prop.getProperty("mysql_driver");
-                if(dbEnum.equals(DBSettingEnum.by10Rain)){
+                if(dbEnum.equals(DBSettingEnum.by10Rain) || dbEnum.equals(DBSettingEnum.byStation)){
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "rn";
                 }else{
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "ty";
@@ -55,7 +55,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
             }else{
                 // MariaDB
                 driver = prop.getProperty("maria_driver");
-                if(dbEnum.equals(DBSettingEnum.by10Rain)){
+                if(dbEnum.equals(DBSettingEnum.by10Rain) || dbEnum.equals(DBSettingEnum.byStation)){
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "rn";
                 }else{
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "ty";

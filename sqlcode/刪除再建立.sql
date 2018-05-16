@@ -72,7 +72,7 @@ CREATE TABLE EnsembleInfo (
 	ty_info_id INT NOT NULL,
 	centre_info_id INT NOT NULL,
 	base_time DATETIME NOT NULL,
-	member INT NOT NULL,
+	member VARCHAR(10) NOT NULL,
 	PRIMARY KEY (`e_info_id`),
 	FOREIGN KEY (ty_info_id) REFERENCES TyphoonInfo(ty_info_id),
 	FOREIGN KEY (centre_info_id) REFERENCES CentreInfo(centre_info_id)

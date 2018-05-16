@@ -5,5 +5,6 @@ package app.db;
  */
 public enum DBSettingEnum {
     by10Rain,
-    byTyphoon
+    byTyphoon,
+    byStation
 }

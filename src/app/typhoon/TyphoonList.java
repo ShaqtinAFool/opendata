@@ -58,7 +58,7 @@ public class TyphoonList implements Itf_Prop {
     }//</editor-fold>
     
     /**
-     * 抓氣象局颱風資料庫資料
+     * 抓氣象局颱風資料庫資料，產出 html 檔案
      */
     public void getCWBTyListToHtml() {//<editor-fold defaultstate="collapsed" desc="...">
         int waitTimeSec = 20;
