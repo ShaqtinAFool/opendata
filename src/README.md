@@ -52,10 +52,11 @@
             - +numberChange(enNumber:String): String → 英文數字轉阿拉伯數字(one --> 1)
         - TyphoonData extends DBSetting
             - -setProperty() → 設定 property
-            - +downloadData(xmlFile:String, xmlURL:String, createDirPath:String) → 下載 xml
+            - -downloadData(xmlFile:String, xmlURL:String, createDirPath:String) → 下載 xml
             - +getTigge(timeout:int, dt_enum:DownloadTypeEnum) → 下載 tigge XML (目前隱性建議，用 shell 下載或許較好)
-            - +moveFile(sourceURL:String, destinationURL:String) → 搬移 xml
-            - +deleteTempDirectory(url:String) → 刪除 tigge 資料夾 by 遞回
+            - -moveFileAndDelete(sourceURL:String, destinationURL:String) → 搬移 xml
+                - 在 Linux 環境似乎無法搬移檔案，改用 shell 搬移
+            - -deleteTempDirectory(url:String) → 刪除 tigge 資料夾 by 遞回
             - +parseTigge(url:String) → 解析 tigge XML
             - +parseCWBTrack(url:String) → 解析 CWB Best Track
             - +parseTy2000() → 解析 typhoon 2000

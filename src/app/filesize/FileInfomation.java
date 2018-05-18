@@ -44,13 +44,14 @@ public class FileInfomation implements Itf_Prop {
     }
     
     /**
-     * 取得目錄層數
+     * 取得 tigge 目錄層數
      * @param url
      * @return 
      */
     public int getDirectoryLevel(String url) {
-        p = Paths.get(prop.get("download_dir_path").toString());
-        int lev = p.getNameCount();
+//        p = Paths.get(prop.get("download_dir_path").toString());
+        p = Paths.get(url);
+        int lev = p.getParent().getParent().getParent().getParent().getNameCount();
         return lev;
     }
     

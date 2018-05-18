@@ -12,13 +12,14 @@ SELECT
 	btc.lat,
 	btc.lon,
 	btc.min_pres
+	
 FROM BestTrackInfo AS bti
 INNER JOIN BestTrackContent AS btc ON btc.bt_info_id = bti.bt_info_id
 INNER JOIN CentreInfo AS ci ON ci.centre_info_id = bti.centre_info_id
 INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = bti.ty_info_id
-#where btc.bt_info_id between 18 and 18
+#WHERE ti.ty_info_id = 248
 ORDER BY ti.ty_number,bti.base_time
-#LIMIT 10
+LIMIT 10
 ;
 
 # 分析
@@ -88,7 +89,7 @@ FROM EnsembleInfo AS ei
 INNER JOIN EnsembleContent AS ec ON ec.e_info_id = ei.e_info_id
 INNER JOIN CentreInfo AS ci ON ci.centre_info_id = ei.centre_info_id
 INNER JOIN TyphoonInfo AS ti ON ti.ty_info_id = ei.ty_info_id
-#where ec.e_info_id between 1 and 5
+WHERE ei.base_time >= '2018-04-01'
 ORDER BY ei.member,ti.ty_number,ei.base_time
 LIMIT 10
 ;

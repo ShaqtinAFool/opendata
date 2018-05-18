@@ -109,7 +109,7 @@ public class TyphoonData extends DBSetting {
      * @param xmlURL xml URL
      * @param createDirPath 檔案下載後的位置
      */
-    public void downloadData(String xmlFile, String xmlURL, String createDirPath) {//<editor-fold defaultstate="collapsed" desc="...">
+    private void downloadData(String xmlFile, String xmlURL, String createDirPath) {//<editor-fold defaultstate="collapsed" desc="...">
         try {
             URL wantToDownloadURL = new URL(xmlURL);
             // 建立資料夾，不知道有沒有強過老方法 createDirectory.mkdirs();
@@ -199,7 +199,7 @@ public class TyphoonData extends DBSetting {
      * @param sourceURL
      * @param destinationURL 
      */
-    public void moveFile(String sourceURL, String destinationURL) {//<editor-fold defaultstate="collapsed" desc="...">
+    private void moveFileAndDelete(String sourceURL, String destinationURL) {//<editor-fold defaultstate="collapsed" desc="...">
 //        System.out.println(sourceURL + " :::> " + destinationURL);
         File sourceFile = new File(sourceURL);
         File destinationFile = new File(destinationURL);
@@ -209,13 +209,16 @@ public class TyphoonData extends DBSetting {
             destinationDirectory.mkdirs();
         }        
         sourceFile.renameTo(destinationFile);
+//        sourceFile.renameTo(destinationDirectory);
+        // 刪除 tigge temp 資料夾，Linux 目前預到搬不過去問題
+        deleteTempDirectory(sourceURL);   
     }//</editor-fold>
     
     /**
      * 刪除 tigge 資料夾 by 遞回
      * @param url
      */
-    public void deleteTempDirectory(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+    private void deleteTempDirectory(String url) {//<editor-fold defaultstate="collapsed" desc="...">
         File destinationPath = new File(url);
         // 目標是只剩下 .\temp\tigge\UKMO
         File destinationDirectory = destinationPath.getParentFile();
@@ -292,7 +295,7 @@ public class TyphoonData extends DBSetting {
                 baseTime = adjust.outputYMDH();
             }else if(raw_BaseTime.isEmpty()){
                 if(doc.select("data").first().text().isEmpty()){
-                    // 只有 UKMO 才會遇到的問題 : 沒有 baseTime ，原始碼 : <baseTime></baseTime>
+                    // 只有 UKMO 才會遇到的問題 : 沒有 baseTime，原始碼 : <baseTime></baseTime>
                     baseTime = "";
                 }else{
                     String raw_validTime = doc.select("validTime").first().text();
@@ -302,6 +305,7 @@ public class TyphoonData extends DBSetting {
             }else{
                 baseTime = "";
             }
+            String baseTime_Year = baseTime.substring(0, 4);
             // 曾經放錯位置過...
             String raw_modelResolution = doc.select("generatingApplication").select("model").select("modelResolution").text();
             String modelResolution;
@@ -373,7 +377,7 @@ public class TyphoonData extends DBSetting {
                                 String spd = elmFix.select("cycloneData").select("maximumWind").select("speed").text();
                                 String spdUnits = elmFix.select("cycloneData").select("maximumWind").select("speed").attr("units").toLowerCase();
                                 if(!typhoonName.isEmpty()){
-                                    int getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoonName, Integer.parseInt(baseTime.substring(0, 4)));
+                                    int getCWBTyphoonNumber = ty_list.getCWBTyNumber(typhoonName, Integer.parseInt(baseTime_Year));
                                     if(typhoonBasin.isEmpty())typhoonBasin = "";
                                     if(typhoonLocalID.isEmpty())typhoonLocalID = "";
                                     if(typhoonNumber.isEmpty())typhoonNumber = "";
@@ -385,7 +389,7 @@ public class TyphoonData extends DBSetting {
                                     }
                                     if(spdUnits.isEmpty())spdUnits = "";
                                     String import_tyInfo = String.format("%s,%s,%s",
-                                        typhoonName, validTime_Year, getCWBTyphoonNumber);
+                                        typhoonName, baseTime_Year, getCWBTyphoonNumber);
                                     String import_cetrInfo = String.format("%s,%s,,-999,%s",
                                         productionCenter, applicationType, dataSource);
                                     String import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
@@ -487,7 +491,7 @@ public class TyphoonData extends DBSetting {
                                     if(type.equals("forecast")){
                                         //<editor-fold defaultstate="collapsed" desc="預報">
                                         import_tyInfo = String.format("%s,%s,%s",
-                                            typhoonName, validTime_Year, getCWBTyphoonNumber);
+                                            typhoonName, baseTime_Year, getCWBTyphoonNumber);
                                         import_cetrInfo = String.format("%s,%s,%s,-999,%s",
                                             productionCenter, applicationType, modelResolution, dataSource);
                                         import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
@@ -498,7 +502,7 @@ public class TyphoonData extends DBSetting {
                                     }else if(type.equals("ensembleForecast")){
                                         //<editor-fold defaultstate="collapsed" desc="系集">
                                         import_tyInfo = String.format("%s,%s,%s",
-                                            typhoonName, validTime_Year, getCWBTyphoonNumber);
+                                            typhoonName, baseTime_Year, getCWBTyphoonNumber);
                                         import_cetrInfo = String.format("%s,%s,%s,%s,%s",
                                             productionCenter, applicationType, modelResolution, geopotentialHeight, dataSource);
                                         import_rawdata = String.format("%s,%s,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
@@ -509,7 +513,7 @@ public class TyphoonData extends DBSetting {
                                     }
                                     hs_tyInfo.add(import_tyInfo);
                                     hs_cetreInfo.add(import_cetrInfo);
-                                    al_rawdata.add(import_rawdata); 
+                                    al_rawdata.add(import_rawdata);
                                 }
                             }
                         } 
@@ -521,12 +525,14 @@ public class TyphoonData extends DBSetting {
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
-            // 搬移 xml
+            // 複製 xml
             String destURL = String.format("%s/tigge/%s/%s/%s", whereToDownload, centre, yymmdd, fileName);
+//            System.out.println("複製檔案從 " + new File(url).exists() + ": " + url);
             if(new File(url).exists()){
                 // 有東西才動作
-                moveFile(url, destURL);                
+                moveFileAndDelete(url, destURL);                
             }
+//            System.out.println("複製檔案到 " + new File(destURL).exists() + ": " + destURL);
             // 測試看看....
             abs_path = null;
             // 建立颱風、單位清單

@@ -39,10 +39,11 @@ public class FV implements Itf_Prop {
             if(e.equals(FVEnum.typhoon)){
                 prop.load(new FileReader(tywebProp));
                 String whereToDownload = "";
-                if("1".equals(prop.get("tigge_download_realtime"))){
+                if("1".equals(prop.get("tigge_parse_realtime"))){
                     // 即時資料
                     whereToDownload = prop.getProperty("download_dir_path_temp");
-                }else if(!"1".equals(prop.get("tigge_download_realtime"))){
+                    
+                }else if(!"1".equals(prop.get("tigge_parse_realtime"))){
                     // 歷史資料
                     whereToDownload = prop.getProperty("download_dir_path");
                 }

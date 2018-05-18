@@ -42,14 +42,11 @@ public class NF_TyphoonList {
             switch (dataType) {
                 case "tigge":
                     // 檔案大小為 0，直接跳過
-//                    if(urlToString.contains("NCEP"))
                     if(fi.getFileSizeByBytes(urlToString) > 8192) {
-                        if(td.setRunOrNotRun("tigge")){    
-                            if(td.setRunOrNotRun("tigge_parse_realtime") && urlToString.contains(theDayBefore)){  
+                        if(td.setRunOrNotRun("tigge")){
+                            if(td.setRunOrNotRun("tigge_parse_realtime") && urlToString.contains(theDayBefore)){ 
                                 // 即時且前一日資料
                                 td.parseTigge(urlToString);
-                                // 刪除 tigge temp 資料夾
-                                td.deleteTempDirectory(urlToString);                                  
                             }else if(td.setRunOrNotRun("tigge_parse_history") && !td.setRunOrNotRun("tigge_parse_realtime")){
                                 // 歷史資料
                                 td.parseTigge(urlToString);
