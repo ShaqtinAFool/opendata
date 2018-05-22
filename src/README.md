@@ -3,6 +3,7 @@
 - 資料庫設定
 - 降雨資料正規化
 - 颱風資料正規化
+- 個案正規化
 
 <!-- /MarkdownTOC -->
 
@@ -20,6 +21,7 @@
             - by10Rain
             - byTyphoon
             - byStation
+            - byCase
 
 # 降雨資料正規化
 - NF_RainData
@@ -70,3 +72,17 @@
             - byHistory
             - byRealtime
             - byStation
+
+---
+
+# 個案正規化
+- NF_Cases
+- app
+    - cases
+        - CasesData extends DBSetting: 建立個案清單
+            - +defineMeiyu() → 定義梅雨個案
+            - +defineThunderstorm() → 定義午後陣雨個案
+            - +parseMeiyu() → 解析梅雨個案
+            - +parseThunderstorm → 解析午後陣雨個案
+            - -importCaseDefinition → 匯入個案定義
+            - -importOverview() → 匯入個案內容

@@ -26,23 +26,23 @@ WHERE ci.centre = 'NCEP'
 ; 
 
 # 刪除
-START TRANSACTION;
-DELETE c.*
-FROM EnsembleContent AS c
-INNER JOIN EnsembleInfo AS i ON i.e_info_id = c.e_info_id
-INNER JOIN CentreInfo AS ci ON ci.centre_info_id = i.centre_info_id
-WHERE ci.centre = 'NCEP'
-COMMIT ;
-ROLLBACK
-;
+-- START TRANSACTION;
+-- DELETE c.*
+-- FROM EnsembleContent AS c
+-- INNER JOIN EnsembleInfo AS i ON i.e_info_id = c.e_info_id
+-- INNER JOIN CentreInfo AS ci ON ci.centre_info_id = i.centre_info_id
+-- WHERE ci.centre = 'NCEP'
+-- COMMIT ;
+-- ROLLBACK
+-- ;
 
-START TRANSACTION;
-DELETE i.*
-FROM EnsembleInfo AS i
-INNER JOIN CentreInfo AS ci ON ci.centre_info_id = i.centre_info_id
-WHERE ci.centre = 'NCEP'
-COMMIT ;
-ROLLBACK
-;
+-- START TRANSACTION;
+-- DELETE i.*
+-- FROM EnsembleInfo AS i
+-- INNER JOIN CentreInfo AS ci ON ci.centre_info_id = i.centre_info_id
+-- WHERE ci.centre = 'NCEP'
+-- COMMIT ;
+-- ROLLBACK
+-- ;
 
 

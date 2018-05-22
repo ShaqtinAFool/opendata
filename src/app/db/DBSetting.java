@@ -37,7 +37,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
             prop.load(new FileReader(dbProp));
             db = prop.getProperty("db");
             if(db.equals("SQL_Server")){
-                // SQl Server
+                // SQL Server
                 driver = prop.getProperty("mssql_driver");
                 jdbcURL = prop.getProperty("mssql_jdbcURL");
                 user = prop.getProperty("mssql_user");
@@ -47,8 +47,10 @@ public class DBSetting implements Itf_Prop, Itf_Database {
                 driver = prop.getProperty("mysql_driver");
                 if(dbEnum.equals(DBSettingEnum.by10Rain) || dbEnum.equals(DBSettingEnum.byStation)){
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "rn";
-                }else{
+                }else if(dbEnum.equals(DBSettingEnum.byTyphoon)){
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "ty";
+                }else{
+                    jdbcURL = prop.getProperty("mysql_jdbcURL") + "case";
                 }
                 user = prop.getProperty("mysql_user");
                 password = prop.getProperty("mysql_password"); 
@@ -57,8 +59,10 @@ public class DBSetting implements Itf_Prop, Itf_Database {
                 driver = prop.getProperty("maria_driver");
                 if(dbEnum.equals(DBSettingEnum.by10Rain) || dbEnum.equals(DBSettingEnum.byStation)){
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "rn";
-                }else{
+                }else if(dbEnum.equals(DBSettingEnum.byTyphoon)){
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "ty";
+                }else{
+                    jdbcURL = prop.getProperty("mysql_jdbcURL") + "case";
                 }
                 user = prop.getProperty("maria_user");
                 password = prop.getProperty("maria_password"); 

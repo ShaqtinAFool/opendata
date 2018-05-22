@@ -4,7 +4,7 @@ import app.filetree.FVEnum;
 import app.station.StationData;
 
 /**
- *
+ * 歷史氣象資料
  * @author tony
  */
 public class NF_HistoryData {
