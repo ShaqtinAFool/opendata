@@ -3,6 +3,17 @@ package app.station;
 //<editor-fold defaultstate="collapsed" desc="...">
 import app.db.DBSetting;
 import app.excptn.StnIdINotFoundException;
+import app.webmodel.HtmlUnit;
+import com.gargoylesoftware.htmlunit.html.DomElement;
+import com.gargoylesoftware.htmlunit.html.DomNodeList;
+import com.gargoylesoftware.htmlunit.html.HtmlDivision;
+import com.gargoylesoftware.htmlunit.html.HtmlElement;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlInput;
+import com.gargoylesoftware.htmlunit.html.HtmlOption;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.html.HtmlSelect;
+import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -16,9 +27,9 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,6 +37,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import osi.presentation.SSL;
 import weather.Adjust;
 //</editor-fold>
 
@@ -38,14 +50,16 @@ public class StationData extends DBSetting {
     private Properties prop;
     private final ArrayList<String> al_rawdata;
     // 映射:可參考 http://jax-work-archive.blogspot.tw/2015/02/java-setlistmap.html
-    private final HashMap<String, String> hm_stnAddress;
+    private final HashMap<String, String> hm_stnAddress, hm_county, hm_stn;
     private HashSet<String> hs_stnInfo;
     private final String db_type;
     private Adjust adjust;
+    private BufferedReader br;
+    private SSL ssl;
 
     /**
-     * 
-     * @param dbEnum 
+     *
+     * @param dbEnum
      */
     public StationData(Enum dbEnum) {//<editor-fold defaultstate="collapsed" desc="...">
         // 必寫
@@ -57,19 +71,23 @@ public class StationData extends DBSetting {
         // 原始資料
         al_rawdata = new ArrayList<>();
         hm_stnAddress = new HashMap<>();
+        hm_county = new HashMap<>();
+        hm_stn = new HashMap<>();
         hs_stnInfo = new HashSet<>();
-        // 時間格式        
+        // 時間格式
         adjust = new Adjust();
+        // 啟動 ssl
+        ssl = new SSL();
         // 將測站地址放到 List 裡面
-        setStnAddress();        
+        setStnAddress();
     }//</editor-fold>
-    
+
     /**
      * 取得測站地址，目前已收集 CWB, WRA, CAA
      */
     private void setStnAddress() {//<editor-fold defaultstate="collapsed" desc="...">
-//        String[] stnType = {"CWB", "WRA", "CAA", "AF"};
-        String[] stnType = {"CAA", "AF"};
+//        String[] stnType = {"CWB", "WRA", "CAA"};
+        String[] stnType = {"CAA"/*, "AF"*/};
         String openDataURL, whereToDownload, fileName;
         URL wantToDownloadURL;
         File makeDownloadDir, createFile, deleteFile;
@@ -103,7 +121,7 @@ public class StationData extends DBSetting {
                                     Elements elms_td = elm_tr.select("td");
                                     String obsId = elms_td.get(0).text();
                                     String locAddress = elms_td.get(6).text();
-                                    System.out.println(obsId + "," + locAddress);
+//                                    System.out.println(obsId + "," + locAddress);
                                     hm_stnAddress.put(obsId, locAddress);
                                 }
                             }
@@ -163,36 +181,35 @@ public class StationData extends DBSetting {
                         hm_stnAddress.put("NN", "緯度,經度,台南,,台南市,XX區,高度");
                         hm_stnAddress.put("LC", "緯度,經度,龍勤,,台南市,XX區,高度");
                         hm_stnAddress.put("XY", "緯度,經度,歸仁,,台南市,XX區,高度");
-                        hm_stnAddress.put("QS", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("RA", "緯度,經度,左營,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("AY", "緯度,經度,岡山,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("CS", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("YU", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("QC", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("LM", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("GM", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("DC", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("SQ", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("TZ", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("KU", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("NO", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("MQ", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("SP", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("WK", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("DI", "緯度,經度,,,台南市,XX區,高度");                        
-                        hm_stnAddress.put("PO", "緯度,經度,,,台南市,XX區,高度");                        
+                        hm_stnAddress.put("QS", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("RA", "緯度,經度,左營,,台南市,XX區,高度");
+                        hm_stnAddress.put("AY", "緯度,經度,岡山,,台南市,XX區,高度");
+                        hm_stnAddress.put("CS", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("YU", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("QC", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("LM", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("GM", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("DC", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("SQ", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("TZ", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("KU", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("NO", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("MQ", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("SP", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("WK", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("DI", "緯度,經度,,,台南市,XX區,高度");
+                        hm_stnAddress.put("PO", "緯度,經度,,,台南市,XX區,高度");
                         //</editor-fold>
                         break;
                     default:
                         break;
                 }
-                
             }
         } catch(IOException ex) {
             ex.printStackTrace();
         }
     }//</editor-fold>
-    
+
     /**
      * 解析 opendata 資料 (real time)
      */
@@ -225,7 +242,7 @@ public class StationData extends DBSetting {
 //            Document doc = Jsoup.connect(openDataURL).timeout(15000).get();
             Document doc = Jsoup.parse(new File(whereToDownload + fileName), "UTF-8");
             Elements elms_location = doc.select("location");
-            String lat, lon, locationName, stationId, time, localTime, elev, 
+            String lat, lon, locationName, stationId, time, localTime, elev,
                     rain, min_10, hour_3, hour_6, hour_12, hour_24, now, city, town, attribute, stnAddress;
             int rows = 1;
             for (Element elm_location : elms_location) {
@@ -254,11 +271,11 @@ public class StationData extends DBSetting {
                 town = elms_parameterValue.get(2).text();
                 attribute = elms_parameterValue.get(4).text();
                 // 輸出結果
-                String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
+                String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
                         lat, lon, locationName, stationId, localTime, elev,
                         rain, min_10, hour_3, hour_6, hour_12, hour_24, now,
                         city, town, attribute);
-                String import_stnInfo = String.format("%s,%s,%s,%s,%s,%s,%s,%s", 
+                String import_stnInfo = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
                         lat, lon, locationName, stationId, elev, city, town, attribute);
 //                System.out.println((rows++) + "," + import_rawdata);
                 // 匯入測站資訊
@@ -290,7 +307,7 @@ public class StationData extends DBSetting {
                         stationId, locationName, city, town, stnAddress, attribute, lat, lon, elev);
 //                System.out.println((rows++) + "," + import_stnInfo);
                 // 將測站列表放入動態陣列來做以下判斷，此陣列的值基本上不會重複
-                al_stnInfo.add(import_stnInfo); 
+                al_stnInfo.add(import_stnInfo);
                 // 判斷是否在 StnInfo 已經存特定測站
                 // 如果不存在，新建站點(用 SQL 語法去找存不存在)
                 judgeExistSQL = "SELECT COUNT(stn_id) FROM StationInfo WHERE stn_id = ?";
@@ -407,7 +424,6 @@ public class StationData extends DBSetting {
                         prepStmt.setInt(1, stnInfo_Id);
                         prepStmt.setString(2, initialTime);
                         prepStmt.setString(3, finalTime);
-                        
                     }else{
                         // 如果有這個測站，就 Update
 //                        System.out.println("Update");
@@ -429,55 +445,76 @@ public class StationData extends DBSetting {
         } finally {
             al_rawdata.clear();
         }
-    }//</editor-fold>    
-    
+    }//</editor-fold>
     /**
      * 解析 qc 過後資料 (from cwb 第三組)
      * @param url
      */
     public void parseCWB(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        System.out.println(adjust.getNowTime() + "  " + url);
+        // 設定參數位置
+        int row_place_PS01 = 0, row_place_TX01 = 0, row_place_RH01 = 0, row_place_WD01 = 0, row_place_WD02 = 0, row_place_PP01 = 0;
+//        String temp = null;
         try {
-//            prop.load(new FileReader(stnwebProp));
             // 讀檔案
-            BufferedReader br = new BufferedReader(new FileReader(url));
+            br = new BufferedReader(new FileReader(url));
             while(br.ready()){
-                String s = br.readLine();             
+                String s = br.readLine();
+                // 先判斷參數位置
+                if(s.contains("# stno")){
+                    int string_lengh_PS01 = s.indexOf("PS01");
+                    int string_lengh_TX01 = s.indexOf("TX01");
+                    int string_lengh_RH01 = s.indexOf("RH01");
+                    int string_lengh_WD01 = s.indexOf("WD01");
+                    int string_lengh_WD02 = s.indexOf("WD02");
+                    int string_lengh_PP01 = s.indexOf("PP01");
+                    row_place_PS01 = s.substring(0, string_lengh_PS01).split("\\s+").length - 1;
+                    row_place_TX01 = s.substring(0, string_lengh_TX01).split("\\s+").length - 1;
+                    row_place_RH01 = s.substring(0, string_lengh_RH01).split("\\s+").length - 1;
+                    row_place_WD01 = s.substring(0, string_lengh_WD01).split("\\s+").length - 1;
+                    row_place_WD02 = s.substring(0, string_lengh_WD02).split("\\s+").length - 1;
+                    row_place_PP01 = s.substring(0, string_lengh_PP01).split("\\s+").length - 1;
+//                    temp = String.format("%d,%d,%d,%d,%d,%d", row_place_PS01, row_place_TX01, row_place_RH01,
+//                                        row_place_WD01, row_place_WD02, row_place_PP01);     
+                }
+                // start
                 if(s.matches("C[01].*")){//<editor-fold defaultstate="collapsed" desc="...">
                     String stationId = s.split("\\s+")[0];
-                    String raw_localTime = s.split("\\s+")[1]; 
-                    String ps = s.split("\\s+")[2];                       
+                    String raw_localTime = s.split("\\s+")[1];
+                    String ps = s.split("\\s+")[row_place_PS01];
                     adjust.inputValue(raw_localTime);
                     String localTime = adjust.outputYMDH();
-                    String tp = s.split("\\s+")[3];
-                    String rh = s.split("\\s+")[4];
-                    String ws = s.split("\\s+")[5];
-                    String wd = s.split("\\s+")[6];
-                    String rn = s.split("\\s+")[7];
+                    String tp = s.split("\\s+")[row_place_TX01];
+                    String rh = s.split("\\s+")[row_place_RH01];
+                    String ws = s.split("\\s+")[row_place_WD01];
+                    String wd = s.split("\\s+")[row_place_WD02];
+                    String rn = s.split("\\s+")[row_place_PP01];
                     String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
                             stationId, localTime, ps, tp, rh, ws, wd, rn);
                     // 匯入原始資料
-                    al_rawdata.add(import_rawdata); 
+                    al_rawdata.add(import_rawdata);
                     //</editor-fold>
                 }else if(s.matches("46.*")){//<editor-fold defaultstate="collapsed" desc="...">
                     String stationId = s.split("\\s+")[0];
-                    String raw_localTime = s.split("\\s+")[1]; 
-                    String ps = s.split("\\s+")[2];                       
+                    String raw_localTime = s.split("\\s+")[1];
+                    String ps = s.split("\\s+")[row_place_PS01];
                     adjust.inputValue(raw_localTime);
                     String localTime = adjust.outputYMDH();
-                    String tp = s.split("\\s+")[4];
-                    String rh = s.split("\\s+")[7];
-                    String ws = s.split("\\s+")[9];
-                    String wd = s.split("\\s+")[10];
-                    String rn = s.split("\\s+")[15];
+                    String tp = s.split("\\s+")[row_place_TX01];
+                    String rh = s.split("\\s+")[row_place_RH01];
+                    String ws = s.split("\\s+")[row_place_WD01];
+                    String wd = s.split("\\s+")[row_place_WD02];
+                    String rn = s.split("\\s+")[row_place_PP01];
                     String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
                             stationId, localTime, ps, tp, rh, ws, wd, rn);
                     // 匯入原始資料
-                    al_rawdata.add(import_rawdata);  
+                    al_rawdata.add(import_rawdata);
                 }//</editor-fold>
             }
+            br.close();
             /********************** 匯入資料庫 **********************/
             PreparedStatement prepStmt;
-            ResultSet rs;            
+            ResultSet rs;
             String judgeExistSQL, insertSQL;
             for (String s : al_rawdata) {
                 String stationId = s.split(",")[0];
@@ -524,59 +561,114 @@ public class StationData extends DBSetting {
             }
         } catch (IOException | SQLException ex) {
             ex.printStackTrace();
+        } finally {
+            // 釋放 resource
+            al_rawdata.clear();
         }
     }//</editor-fold>
-    
+
     /**
      * 解析民航局資料
      * @param url 
      */
     public void parseCAA(String url) {//<editor-fold defaultstate="collapsed" desc="...">
+        System.out.println(adjust.getNowTime() + "  " + url);
         DecimalFormat df = new DecimalFormat("#.0");
+        // 讀檔案
         try {
             // 讀檔案
-            BufferedReader br = new BufferedReader(new FileReader(url));
+            br = new BufferedReader(new FileReader(url));
             while(br.ready()){
                 String s = br.readLine();
-                String stationId = "46" + s.substring(0, 3);
-                String locationName = hm_stnAddress.get(stationId).split(",")[2];
-                String lat = hm_stnAddress.get(stationId).split(",")[0];
-                String lon = hm_stnAddress.get(stationId).split(",")[1];
-                String elev = hm_stnAddress.get(stationId).split(",")[6];
-                String city = hm_stnAddress.get(stationId).split(",")[4];
-                String town = hm_stnAddress.get(stationId).split(",")[5];
-                String attribute = "民用航空局";
-                String raw_localTime = s.substring(3, 13);               
-                adjust.inputValue(raw_localTime);
-                String localTime = adjust.outputYMDH();
-                String ps = Double.parseDouble(s.substring(66, 71)) / 10.0 + "";
-                String tp = Double.parseDouble(s.substring(58, 61)) / 10.0 + "";
-                String rh = s.substring(64, 66);
-                String ws = df.format(Double.parseDouble(s.substring(17, 20)) * 0.514) + "";
-                String wd = Double.parseDouble(s.substring(15, 17)) * 10 + "";
-                double raw_rn = Double.parseDouble(s.substring(71, 76)) / 100.0;
-                String rn;
-                if(raw_rn >= 500.0){
-                    rn = "0.0";
-                }else{
-                    rn = raw_rn + "";
+                String import_stnInfo = null, import_rawdata = null;
+                if(url.contains(".txt")){
+                    if(s.contains("end"))continue;
+                    String stationId = "46" + s.substring(0, 3);
+                    String locationName = hm_stnAddress.get(stationId).split(",")[2];
+                    String lat = hm_stnAddress.get(stationId).split(",")[0];
+                    String lon = hm_stnAddress.get(stationId).split(",")[1];
+                    String elev = hm_stnAddress.get(stationId).split(",")[6];
+                    String city = hm_stnAddress.get(stationId).split(",")[4];
+                    String town = hm_stnAddress.get(stationId).split(",")[5];
+                    String attribute = "民用航空局";
+                    String raw_localTime = s.substring(3, 15);
+                    adjust.inputValue(raw_localTime);
+                    String localTime = adjust.outputYMDH();
+                    String ps = Double.parseDouble(s.substring(66, 71)) / 10.0 + "";
+                    String tp = Double.parseDouble(s.substring(58, 61)) / 10.0 + "";
+                    String rh = s.substring(64, 66).trim();
+                    if(rh.isEmpty())rh = "-999";
+                    String raw_ws = s.substring(17, 20).trim();
+                    String ws;
+                    if(raw_ws.isEmpty()){
+                        ws = "-999";
+                    }else{
+                        ws = df.format(Double.parseDouble(raw_ws) * 0.514) + "";
+                    }
+                    String wd = Double.parseDouble(s.substring(15, 17)) * 10 + "";
+                    String raw_rn_old = s.substring(71, 76).trim();
+                    String rn;
+                    if(raw_rn_old.isEmpty()){
+                        rn = "-999.0";
+                    }else{
+                        double raw_rn = Double.parseDouble(raw_rn_old) / 100.0;
+                        if(raw_rn >= 500.0){
+                            rn = "-999.0";
+                        }else{
+                            rn = raw_rn + "";
+                        }
+                    }
+                    import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
+                            stationId, localTime, ps, tp, rh, ws, wd, rn);
+                    import_stnInfo = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
+                            lat, lon, locationName, stationId, elev, city, town, attribute);
+                }else if(url.contains(".csv")){
+                    if(!s.matches("[0-9].*"))continue;
+                    String stationId = "46" + s.split(",")[0];
+                    String locationName = hm_stnAddress.get(stationId).split(",")[2];
+                    String lat = hm_stnAddress.get(stationId).split(",")[0];
+                    String lon = hm_stnAddress.get(stationId).split(",")[1];
+                    String elev = hm_stnAddress.get(stationId).split(",")[6];
+                    String city = hm_stnAddress.get(stationId).split(",")[4];
+                    String town = hm_stnAddress.get(stationId).split(",")[5];
+                    String attribute = "民用航空局";
+                    int year = Integer.parseInt(s.split(",")[1]);
+                    int month = Integer.parseInt(s.split(",")[2]);
+                    int day = Integer.parseInt(s.split(",")[3]);
+                    int hour = Integer.parseInt(s.split(",")[4]);
+                    int minute = Integer.parseInt(s.split(",")[5]);
+                    adjust.inputValue(year, month, day, hour, minute);
+                    String localTime = adjust.outputYMDH();
+                    String ps = s.split(",")[29].trim();
+                    String tp = s.split(",")[26].trim();
+                    String rh = s.split(",")[28].trim();
+                    String ws = s.split(",")[7].trim();
+                    String wd = s.split(",")[6].trim();
+                    String raw_rn = s.split(",")[30].trim();
+                    String rn;
+                    if(raw_rn.isEmpty()){
+                        rn = "-999.0";
+                    }else{
+                        rn = raw_rn;
+                    }
+                    import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
+                            stationId, localTime, ps, tp, rh, ws, wd, rn);
+                    import_stnInfo = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
+                            lat, lon, locationName, stationId, elev, city, town, attribute);
                 }
-                String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s",
-                        stationId, localTime, ps, tp, rh, ws, wd, rn);
-                String import_stnInfo = String.format("%s,%s,%s,%s,%s,%s,%s,%s", 
-                        lat, lon, locationName, stationId, elev, city, town, attribute);
                 // 匯入測站資訊
                 hs_stnInfo.add(import_stnInfo);
                 // 匯入原始資料
-                al_rawdata.add(import_rawdata);           
+                al_rawdata.add(import_rawdata);
             }
+            br.close();
             /********************** 會用到的語法 **********************/
             String judgeExistSQL, insertSQL, updateSQL, selectSQL, establishFK;
+            PreparedStatement prepStmt;
+            ResultSet rs;
             /********************** 建立測站資訊 **********************/
             // StnInfo 插入 PK
             ArrayList<String> al_stnInfo = new ArrayList<>();
-            PreparedStatement prepStmt;
-            ResultSet rs;
             for (String s : hs_stnInfo) {
                 // 讀測站資訊
                 String lon = s.split(",")[0];
@@ -627,7 +719,7 @@ public class StationData extends DBSetting {
                         break;
                     }
                 }
-            }     
+            }
             /********************** 匯入資料庫 **********************/
             for (String s : al_rawdata) {
                 String stationId = s.split(",")[0];
@@ -671,17 +763,129 @@ public class StationData extends DBSetting {
                         break;
                     }
                 }
-            }            
+            }
         } catch (IOException | SQLException ex) {
             ex.printStackTrace();
+        } finally {
+            // 釋放 resource
+            hs_stnInfo.clear();
+            al_rawdata.clear();
         }
     }//</editor-fold>
-    
+
     /**
      * 解析空軍資料
-     * @param url 
+     * @param url
      */
     public void parseAF(String url) {
+
+    }
+    
+    /**
+     * 解析觀測資料查詢系統
+     */
+    public void parseCODis() {
+        try {
+            prop.load(new FileReader(stnwebProp));
+            String url_main = prop.getProperty("codis_list");
+            HtmlUnit htmlUnit = new HtmlUnit(url_main);
+            HtmlPage htmlPage = htmlUnit.getHtmlPage();
+            HtmlForm htmlForm = htmlPage.getFormByName("stationSelect");
+            /**
+             * 處理縣市
+             * <select name="stationCounty" id="stationCounty" style="width: 220px;">
+                <option value="臺北市">臺北市 (TaipeiCity)</option>
+                <option value="新北市">新北市 (NewTaipeiCity)</option>
+             */
+            DomElement de_stationCounty = htmlPage.getElementById("stationCounty");
+            DomNodeList<HtmlElement> dnl_stationCounty = de_stationCounty.getElementsByTagName("option");
+            for (HtmlElement he_stationCounty : dnl_stationCounty) {
+                String stationCounty = he_stationCounty.getAttribute("value");
+                HtmlSelect htmlSelect_stationCounty = htmlForm.getSelectByName("stationCounty");
+                HtmlOption htmlOption_stationCounty = htmlSelect_stationCounty.getOptionByValue(stationCounty);
+                htmlSelect_stationCounty.setSelectedAttribute(htmlOption_stationCounty, true);
+                /**
+                 * 處理測站
+                 * <select name="station" id="station" style="width: 220px;">
+                   <option value="466910">鞍部 (ANBU)</option>
+                   <option value="466920">臺北 (TAIPEI)</option>
+                */
+                DomElement de_station = htmlPage.getElementById("station");
+                DomNodeList<HtmlElement> dnl_station = de_station.getElementsByTagName("option");
+                for (HtmlElement he_station : dnl_station) {
+                    String station_id = he_station.getAttribute("value");
+                    String station_tw = he_station.getTextContent();
+                    HtmlSelect htmlSelect_station = htmlForm.getSelectByName("station");
+                    HtmlOption htmlOption_station = htmlSelect_station.getOptionByValue(station_id);
+                    htmlSelect_station.setSelectedAttribute(htmlOption_station, true);
+                    // 時間範圍
+                    adjust = new Adjust("yyyy-MM-dd");
+                    String inital_date = prop.getProperty("inital_date");
+                    adjust.inputValue(inital_date);
+                    int rangeDay = adjust.diffDay(inital_date, "2010-01-02");
+                    int d = 0;
+                    do {
+                        String date = adjust.adjustDay(d);
+                        // 輸出網址
+                        String url_stnData = String.format(
+                                "https://e-service.cwb.gov.tw/HistoryDataQuery/DayDataController.do?command=viewMain&station=%s&stname=%s&datepicker=%s", 
+                                station_id, station_tw, date);
+                        System.out.println(url_stnData);
+                        ssl.enableSSLSocket();
+                        Document doc = Jsoup.connect(url_stnData).get();
+                        Elements elms_div = doc.select("div");
+                        for (Element elm_div : elms_div) {
+                            /**
+                             * 跳過這個
+                             * <div id="hea_t" style="position:fixed;top:0px;">
+                             */
+                            if(elm_div.hasAttr("id"))continue;
+                            /**
+                             * 選這個才是有資料的地方
+                               <div class="CSSTableGenerator" style="position:relative;top:30px">
+                             */
+                            String label = elm_div.select("label").text();
+                            if(label.equals("本段時間區間內無觀測資料。"))break;
+                            Elements elms_table = elm_div.select("table");
+                            for (Element elm_table : elms_table) {
+                                Elements elms_tr = elm_table.select("tr");
+                                for (Element elm_tr : elms_tr) {
+                                    /**
+                                     * 前兩列不要看
+                                     * <tr class="first_tr">
+                                       <tr class="second_tr">
+                                     */                                    
+                                    if(elm_tr.hasClass("first_tr") == true || elm_tr.hasClass("second_tr") == true)continue;
+                                    Elements elms_td = elm_tr.select("td");
+                                    String obsTime = elms_td.get(0).text().trim();
+                                    String stnPres = elms_td.get(1).text().trim();
+//                                    String seaPres = elms_td.get(2).text().trim();
+                                    String temperature = elms_td.get(3).text().trim();
+                                    String td = elms_td.get(4).text().trim();
+                                    String rh = elms_td.get(5).text().trim();
+                                    String ws = elms_td.get(6).text().trim();
+                                    String wd = elms_td.get(7).text().trim();
+                                    String precp = elms_td.get(10).text().trim();     
+                                    
+                                    String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                                            station_id, obsTime, stnPres, temperature, td,
+                                            rh, ws, wd, precp);
+                                    System.out.println(import_rawdata);                                    
+                                }
+
+
+                            }
+                        }
+                        d++;
+                        break;
+                    } while(d <= rangeDay);
+                }
+            }
+            
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
         
     }
+    
 }

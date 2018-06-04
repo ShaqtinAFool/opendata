@@ -31,7 +31,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
      * 設定 db 資訊
      */
     @Override
-    public void setDBInfo() {
+    public void setDBInfo() {//<editor-fold defaultstate="collapsed" desc="...">
         Properties prop = new Properties();
         try {
             prop.load(new FileReader(dbProp));
@@ -49,7 +49,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "rn";
                 }else if(dbEnum.equals(DBSettingEnum.byTyphoon)){
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "ty";
-                }else{
+                }else if(dbEnum.equals(DBSettingEnum.byCase)){
                     jdbcURL = prop.getProperty("mysql_jdbcURL") + "case";
                 }
                 user = prop.getProperty("mysql_user");
@@ -61,8 +61,8 @@ public class DBSetting implements Itf_Prop, Itf_Database {
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "rn";
                 }else if(dbEnum.equals(DBSettingEnum.byTyphoon)){
                     jdbcURL = prop.getProperty("maria_jdbcURL") + "ty";
-                }else{
-                    jdbcURL = prop.getProperty("mysql_jdbcURL") + "case";
+                }else if(dbEnum.equals(DBSettingEnum.byCase)){
+                    jdbcURL = prop.getProperty("maria_jdbcURL") + "case";
                 }
                 user = prop.getProperty("maria_user");
                 password = prop.getProperty("maria_password"); 
@@ -74,7 +74,7 @@ public class DBSetting implements Itf_Prop, Itf_Database {
         } finally {
             System.out.println("使用 " + db);
         }
-    }
+    }//</editor-fold>
     
     /**
      * 取得連接資料庫的設定
