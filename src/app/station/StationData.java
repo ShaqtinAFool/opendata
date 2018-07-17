@@ -784,7 +784,7 @@ public class StationData extends DBSetting {
     /**
      * 解析觀測資料查詢系統
      */
-    public void parseCODis() {
+    public void parseCODis() {//<editor-fold defaultstate="collapsed" desc="...">
         try {
             prop.load(new FileReader(stnwebProp));
             String url_main = prop.getProperty("codis_list");
@@ -860,20 +860,18 @@ public class StationData extends DBSetting {
                                     String obsTime = elms_td.get(0).text().trim();
                                     String stnPres = elms_td.get(1).text().trim();
 //                                    String seaPres = elms_td.get(2).text().trim();
-                                    String temperature = elms_td.get(3).text().trim();
-                                    String td = elms_td.get(4).text().trim();
-                                    String rh = elms_td.get(5).text().trim();
-                                    String ws = elms_td.get(6).text().trim();
+                                    String temperature = elms_td.get(3).text();
+                                    String td = elms_td.get(4).text();
+                                    String rh = elms_td.get(5).text();
+                                    String ws = elms_td.get(6).text();
                                     String wd = elms_td.get(7).text().trim();
                                     String precp = elms_td.get(10).text().trim();     
                                     
                                     String import_rawdata = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s",
                                             station_id, obsTime, stnPres, temperature, td,
                                             rh, ws, wd, precp);
-                                    System.out.println(import_rawdata);                                    
+                                    System.out.println(import_rawdata);
                                 }
-
-
                             }
                         }
                         d++;
@@ -881,11 +879,9 @@ public class StationData extends DBSetting {
                     } while(d <= rangeDay);
                 }
             }
-            
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        
-    }
+    }//</editor-fold>
     
 }

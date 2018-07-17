@@ -27,8 +27,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -42,7 +40,7 @@ import weather.Adjust;
  * Tigge、CWB Best Track 
  */
 public class TyphoonData extends DBSetting {
-    
+
     private Properties prop;
     private Connection conn;
     private int setYear;
@@ -57,7 +55,7 @@ public class TyphoonData extends DBSetting {
     private HashSet<String> hs_cetreInfo;
     private HashSet<String> hs_anlyInfo, hs_foreInfo, hs_ensbInfo, hs_bstkInfo;
     private ArrayList<String> al_rawdata;
-    
+
     /**
      * 
      * @param dbEnum
@@ -652,7 +650,7 @@ public class TyphoonData extends DBSetting {
                                     /** 取個測站的範圍 **/
                                     int initNumber = al_rawdata_v2.indexOf(unit[stnNb]);
                                     int stopNumber = 0;
-                                    // unit.length = 7                                        
+                                    // unit.length = 7
                                     if(stnNb < 5){
                                         stopNumber = al_rawdata_v2.indexOf(unit[stnNb+1]);
                                         // 防止有些預報單位沒有資料(when stopNumber = -1)

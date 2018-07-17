@@ -50,24 +50,24 @@ public class TyphoonList implements Itf_Prop {
             al_tylist = new ArrayList<>();
             /**
              * 測試1 處理 java.lang.OutOfMemoryError: Java heap space，將 doc 擺在建構子
-             */            
+             */
             doc = Jsoup.parse(file , "UTF-8");
         } catch (IOException ex) {
             ex.printStackTrace();
-        }        
+        }
     }//</editor-fold>
-    
+
     /**
      * 抓氣象局颱風資料庫資料，產出 html 檔案
      */
     public void getCWBTyListToHtml() {//<editor-fold defaultstate="collapsed" desc="...">
         int waitTimeSec = 20;
         WebClient webClient = new WebClient();
-        
+
         // 關閉 htmlunit warnings
         java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(java.util.logging.Level.OFF);
         java.util.logging.Logger.getLogger("org.apache.http").setLevel(java.util.logging.Level.OFF);      
-        
+
         try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(whereToDownload + "tylist.html"),"UTF-8"))) {
             HtmlPage page = webClient.getPage(url);
             // https://developers.google.com/webmasters/ajax-crawling/docs/html-snapshot
@@ -293,10 +293,10 @@ public class TyphoonList implements Itf_Prop {
                     return "33";
                 case "thirtyfou":
                 case "thirtyfour":
-                    return "34"; 
+                    return "34";
                 case "thirtyfiv":
                 case "thirtyfive":
-                    return "35";                    
+                    return "35";
                 default:
                     break;
             }
@@ -305,5 +305,4 @@ public class TyphoonList implements Itf_Prop {
 //        System.out.println(onlyNumber);
         return onlyNumber + "";
     }//</editor-fold>
-    
 }
